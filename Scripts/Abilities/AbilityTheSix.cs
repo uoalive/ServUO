@@ -99,11 +99,14 @@ namespace Server
             from.Say("*Vas Grav Hur*");
 
             List<PlayerMobile> list = new List<PlayerMobile>();
+            IPooledEnumerable eable = from.GetMobilesInRange(8);
 
-            foreach (Mobile m in from.GetMobilesInRange(8))
+            foreach (Mobile m in eable)
                 if (m != null)
                     if (m is PlayerMobile)
                         list.Add((PlayerMobile)m);
+
+            eable.Free();
 
             new SoulDrainTimer(from, list).Start();
         }
@@ -244,13 +247,16 @@ namespace Server
 
             private void SetupDamage(Mobile from)
             {
-                foreach (Mobile m in from.GetMobilesInRange(10))
+                IPooledEnumerable eable = from.GetMobilesInRange(10);
+                foreach (Mobile m in eable)
                 {
                     if (CanTarget(from, m, true, false, false))
                     {
                         Timer.DelayCall(TimeSpan.FromMilliseconds(300 * (this.GetDist(this.m_StartingLocation, m.Location) / 3)), new TimerStateCallback(Hurt), m);
                     }
                 }
+
+                eable.Free();
             }
 
             public void Hurt(object o)
@@ -345,7 +351,7 @@ namespace Server
                     {
                         // Damage was 2 on the nightmare which has 30~40% fire res. 4 - 35% = 2.6, close enough for me.
                         if (itemid != 0)
-                            new FireFieldSpell.FireFieldItem(itemid, point, from, from.Map, TimeSpan.FromSeconds(30), 1, 100);
+                            new FireFieldSpell.FireFieldItem(itemid, point, from, from.Map, TimeSpan.FromSeconds(30), 100);
                         else
                         {
                             new OtherFireFieldItem(0x3996, point, from, from.Map, TimeSpan.FromSeconds(30), 1, 80);
@@ -394,7 +400,7 @@ namespace Server
             }
 
             public OtherFireFieldItem(int itemID, Point3D loc, Mobile caster, Map map, TimeSpan duration, int val, int damage)
-                : base(itemID, loc, caster, map, duration, val, damage)
+                : base(itemID, loc, caster, map, duration, damage)
             {
             }
 
@@ -645,7 +651,8 @@ namespace Server
                     this.Delete();
                 else if (this.m_MinDamage != 0)
                 {
-                    foreach (Mobile m in this.GetMobilesInRange(0))
+                    IPooledEnumerable eable = GetMobilesInRange(0);
+                    foreach (Mobile m in eable)
                     {
                         if (m == null)
                             continue;
@@ -657,6 +664,8 @@ namespace Server
                         else
                             this.m_List.Add(m);
                     }
+
+                    eable.Free();
 
                     for (int i = 0; i < this.m_List.Count; i++)
                     {

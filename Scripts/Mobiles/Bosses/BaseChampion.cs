@@ -34,26 +34,25 @@ namespace Server.Mobiles
                 return false;
             }
         }
-        public static void GivePowerScrollTo(Mobile m)
+
+        public virtual bool CanGivePowerscrolls { get { return true; } }
+
+        public static void GivePowerScrollTo(Mobile m, Item item, BaseChampion champ)
         {
             if (m == null)	//sanity
                 return;
 
-			PowerScroll ps = CreateRandomPowerScroll();
-
-            m.SendLocalizedMessage(1049524); // You have received a scroll of power!
-
             if (!Core.SE || m.Alive)
-                m.AddToBackpack(ps);
+                m.AddToBackpack(item);
             else
             {
                 if (m.Corpse != null && !m.Corpse.Deleted)
-                    m.Corpse.DropItem(ps);
+                    m.Corpse.DropItem(item);
                 else
-                    m.AddToBackpack(ps);
+                    m.AddToBackpack(item);
             }
 
-            if (m is PlayerMobile)
+            if (item is PowerScroll && m is PlayerMobile)
             {
                 PlayerMobile pm = (PlayerMobile)m;
 
@@ -61,7 +60,7 @@ namespace Server.Mobiles
                 {
                     Mobile prot = pm.JusticeProtectors[j];
 
-                    if (prot.Map != m.Map || prot.Kills >= 5 || prot.Criminal || !JusticeVirtue.CheckMapRegion(m, prot))
+                    if (prot.Map != m.Map || prot.Murderer || prot.Criminal || !JusticeVirtue.CheckMapRegion(m, prot) || !prot.InRange(champ, 100))
                         continue;
 
                     int chance = 0;
@@ -157,7 +156,7 @@ namespace Server.Mobiles
             {
                 DamageStore ds = rights[i];
 
-                if (ds.m_HasRight)
+                if (ds.m_HasRight && InRange(ds.m_Mobile, 100) && ds.m_Mobile.Map == this.Map)
                     toGive.Add(ds.m_Mobile);
             }
 
@@ -185,7 +184,7 @@ namespace Server.Mobiles
                 }
             }
 
-            // Randomize
+            // Randomize - PowerScrolls
             for (int i = 0; i < toGive.Count; ++i)
             {
                 int rand = Utility.Random(toGive.Count);
@@ -198,13 +197,40 @@ namespace Server.Mobiles
             {
                 Mobile m = toGive[i % toGive.Count];
 
-                GivePowerScrollTo(m);
+                PowerScroll ps = CreateRandomPowerScroll();
+                m.SendLocalizedMessage(1049524); // You have received a scroll of power!
+
+                GivePowerScrollTo(m, ps, this);
             }
+
+            if (Core.TOL)
+            {
+                // Randomize - Primers
+                for (int i = 0; i < toGive.Count; ++i)
+                {
+                    int rand = Utility.Random(toGive.Count);
+                    Mobile hold = toGive[i];
+                    toGive[i] = toGive[rand];
+                    toGive[rand] = hold;
+                }
+
+                for (int i = 0; i < ChampionSystem.PowerScrollAmount; ++i)
+                {
+                    Mobile m = toGive[i % toGive.Count];
+
+                    SkillMasteryPrimer p = CreateRandomPrimer();
+                    m.SendLocalizedMessage(1156209); // You have received a mastery primer!
+
+                    GivePowerScrollTo(m, p, this);
+                }
+            }
+
+            ColUtility.Free(toGive);
         }
 
         public override bool OnBeforeDeath()
         {
-            if (!this.NoKillAwards)
+            if (CanGivePowerscrolls && !NoKillAwards)
             {
                 this.GivePowerScrolls();
 
@@ -263,5 +289,9 @@ namespace Server.Mobiles
             return PowerScroll.CreateRandomNoCraft(level, level);
         }
 
+        private static SkillMasteryPrimer CreateRandomPrimer()
+        {
+            return SkillMasteryPrimer.GetRandom();
+        }
     }
 }

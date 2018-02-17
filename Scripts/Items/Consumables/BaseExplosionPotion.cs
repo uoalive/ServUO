@@ -174,7 +174,7 @@ namespace Server.Items
 			foreach (object o in eable)
 			{
 				if (o is Mobile &&
-					(from == null || (SpellHelper.ValidIndirectTarget(from, (Mobile)o) && from.CanBeHarmful((Mobile)o, false))))
+					(from == null || (SpellHelper.ValidIndirectTarget(from, (Mobile)o) && from.CanBeHarmful((Mobile)o, false) && from.InLOS((Mobile)o))))
 				{
 					toExplode.Add(o);
 					++toDamage;
@@ -216,7 +216,7 @@ namespace Server.Items
 						damage /= toDamage - 1;
 					}
 
-					AOS.Damage(m, from, damage, 0, 100, 0, 0, 0);
+					AOS.Damage(m, from, damage, 0, 100, 0, 0, 0, Server.DamageType.SpellAOE);
 				}
 				else if (o is BaseExplosionPotion)
 				{

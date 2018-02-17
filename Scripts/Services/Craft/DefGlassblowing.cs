@@ -44,16 +44,18 @@ namespace Server.Engines.Craft
             return 0.0; // 0%
         }
 
-        public override int CanCraft(Mobile from, BaseTool tool, Type itemType)
+        public override int CanCraft(Mobile from, ITool tool, Type itemType)
         {
-            if (tool == null || tool.Deleted || tool.UsesRemaining < 0)
+            int num = 0;
+
+            if (tool == null || tool.Deleted || tool.UsesRemaining <= 0)
                 return 1044038; // You have worn out your tool!
-            else if (!BaseTool.CheckTool(tool, from))
+            else if (tool is Item && !BaseTool.CheckTool((Item)tool, from))
                 return 1048146; // If you have a tool equipped, you must use that tool.
             else if (!(from is PlayerMobile && ((PlayerMobile)from).Glassblowing && from.Skills[SkillName.Alchemy].Base >= 100.0))
                 return 1044634; // You havent learned glassblowing.
-            else if (!BaseTool.CheckAccessible(tool, from))
-                return 1044263; // The tool must be on your person to use.
+            else if (!tool.CheckAccessible(from, ref num))
+                return num; // The tool must be on your person to use.
 
             bool anvil, forge;
 
@@ -116,7 +118,13 @@ namespace Server.Engines.Craft
             this.AddCraft(typeof(EmptyVialsWRack), 1044050, 1044616, 65.0, 115.0, typeof(Sand), 1044625, 8, 1044627);
             this.AddCraft(typeof(FullVialsWRack), 1044050, 1044617, 65.0, 115.0, typeof(Sand), 1044625, 9, 1044627);
             this.AddCraft(typeof(SpinningHourglass), 1044050, 1044618, 75.0, 125.0, typeof(Sand), 1044625, 10, 1044627);
-			
+
+            if (Core.SA)
+            {
+                index = AddCraft(typeof(WorkableGlass), 1044050, 1154170, 55.0, 105.0, typeof(Sand), 1044625, 10, 1044627);
+                SetNeededExpansion(index, Expansion.SA);
+            }
+
             if (Core.ML)
             {
                 index = this.AddCraft(typeof(HollowPrism), 1044050, 1072895, 100.0, 150.0, typeof(Sand), 1044625, 8, 1044627);
@@ -125,9 +133,30 @@ namespace Server.Engines.Craft
 
             if (Core.SA)
             {
+                index = AddCraft(typeof(GargoyleFloorMirror), 1044050, 1095314, 75.0, 125.0, typeof(Sand), 1044625, 20, 1044627);
+                SetNeededExpansion(index, Expansion.SA);
+
+                index = AddCraft(typeof(GargoyleWallMirror), 1044050, 1095324, 70.0, 120.0, typeof(Sand), 1044625, 10, 1044627);
+                SetNeededExpansion(index, Expansion.SA);
+
+                index = AddCraft(typeof(SoulstoneFragment), 1044050, 1071000, 70.0, 120.0, typeof(CrystalGranules), 1112329, 2, 1044253);
+                AddRes(index, typeof(VoidEssence), 1112327, 2, 1044253);
+                SetItemHue(index, 1150);
+                SetNeededExpansion(index, Expansion.SA);
+
                 index = this.AddCraft(typeof(EmptyVenomVial), 1044050, 1112215, 52.5, 102.5, typeof(Sand), 1044625, 1, 1044627);
                 this.SetNeededExpansion(index, Expansion.SA);
+
+                //Glass Weapons
+                index = AddCraft(typeof(GlassSword), 1111745, 1022316, 55.0, 105.0, typeof(Sand), 1044625, 14, 1044627);
+                SetNeededExpansion(index, Expansion.SA);
+
+                index = AddCraft(typeof(GlassStaff), 1111745, 1095368, 53.6, 103.6, typeof(Sand), 1044625, 10, 1044627);
+                SetNeededExpansion(index, Expansion.SA);
             }
+
+            Repair = Core.SA;
+            MarkOption = Core.SA;
         }
 
         // Delay to synchronize the sound with the hit on the anvil

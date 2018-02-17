@@ -1,6 +1,7 @@
 using System;
 using Server.Items;
 using Server.Spells;
+using System.Collections.Generic;
 
 namespace Server.Mobiles
 {
@@ -20,7 +21,10 @@ namespace Server.Mobiles
                 this.m_Altar = value;
             }
         }
+
 		public override bool CanBeParagon { get { return false; } }
+        public virtual bool DropPrimer { get { return Core.TOL; } }
+
         public override bool Unprovokable
         {
             get
@@ -45,7 +49,7 @@ namespace Server.Mobiles
         {
             base.OnThink();
 			
-            if (this.HasFireRing && this.Combatant != null && this.Alive && this.Hits > 0.8 * this.HitsMax && this.m_NextFireRing < DateTime.UtcNow && Utility.RandomDouble() < this.FireRingChance)
+            if (this.HasFireRing && this.Combatant != null && this.Alive && this.Hits > 0.8 * this.HitsMax && this.m_NextFireRing > Core.TickCount && Utility.RandomDouble() < this.FireRingChance)
                 this.FireRing();
 				
             if (this.CanSpawnHelpers && this.Combatant != null && this.Alive && this.CanSpawnWave())
@@ -55,7 +59,32 @@ namespace Server.Mobiles
         public override void OnDeath(Container c)
         {
             base.OnDeath(c);
-			
+
+            if (DropPrimer)
+            {
+                SkillMasteryPrimer primer = SkillMasteryPrimer.GetRandom();
+                List<DamageStore> rights = GetLootingRights();
+
+                if (rights.Count > 0)
+                {
+                    Mobile m = rights[Utility.Random(rights.Count)].m_Mobile;
+
+                    m.SendLocalizedMessage(1156209); // You have received a mastery primer!
+
+                    if (m.Backpack == null || !m.Backpack.TryDropItem(m, primer, false))
+                        m.BankBox.DropItem(primer);
+                }
+                else
+                {
+                    c.DropItem(primer);
+                }
+            }
+
+            if (GivesMLMinorArtifact && 0.5 > Utility.RandomDouble())
+            {
+                MondainsLegacy.DropPeerlessMinor(c);
+            }
+
             if (this.m_Altar != null)
                 this.m_Altar.OnPeerlessDeath();
         }
@@ -63,7 +92,7 @@ namespace Server.Mobiles
         public BasePeerless(AIType aiType, FightMode fightMode, int rangePerception, int rangeFight, double activeSpeed, double passiveSpeed)
             : base(aiType, fightMode, rangePerception, rangeFight, activeSpeed, passiveSpeed)
         {
-            this.m_NextFireRing = DateTime.UtcNow + TimeSpan.FromSeconds(10);			
+            this.m_NextFireRing = Core.TickCount + 10000;			
             this.m_CurrentWave = this.MaxHelpersWaves;
         }
 		
@@ -220,42 +249,6 @@ namespace Server.Mobiles
                 this.PackItem(Loot.RandomTalisman());
         }
 		
-        public virtual Point3D GetSpawnPosition(int range)
-        {
-            return GetSpawnPosition(this.Location, this.Map, range);
-        }
-		
-        public static Point3D GetSpawnPosition(Point3D from, Map map, int range)
-        {
-            if (map == null)
-                return from;
-				
-            for (int i = 0; i < 10; i ++)
-            {
-                int x = from.X + Utility.Random(range);
-                int y = from.Y + Utility.Random(range);
-                int z = map.GetAverageZ(x, y);
-				
-                if (Utility.RandomBool())
-                    x *= -1;
-					
-                if (Utility.RandomBool())
-                    y *= -1;
-					
-                Point3D p = new Point3D(x, y, from.Z);
-				
-                if (map.CanSpawnMobile(p) && map.LineOfSight(from, p))
-                    return p;
-				
-                p = new Point3D(x, y, z);
-					
-                if (map.CanSpawnMobile(p) && map.LineOfSight(from, p))
-                    return p;
-            }
-			
-            return from;
-        }
-		
         #region Fire Ring
         private static readonly int[] m_North = new int[]
         {
@@ -286,7 +279,7 @@ namespace Server.Mobiles
             }
         }
 		
-        private DateTime m_NextFireRing = DateTime.UtcNow;
+        private long m_NextFireRing = Core.TickCount;
 		
         public virtual void FireRing()
         {
@@ -318,7 +311,7 @@ namespace Server.Mobiles
                 Effects.SendLocationEffect(po, this.Map, 0x3E31, 50);
             }
 			
-            this.m_NextFireRing = DateTime.UtcNow + TimeSpan.FromSeconds(10);
+            this.m_NextFireRing = Core.TickCount + 10000;
         }
         #endregion
     }

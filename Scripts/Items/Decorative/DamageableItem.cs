@@ -215,17 +215,29 @@ namespace Server.Items
 
         public override bool ForceShowProperties { get { return false; } }
 
+        [Constructable]
+        public DamageableItem(int startID)
+            : this(startID, startID, -1)
+        {
+        }
+
+        [Constructable]
+        public DamageableItem(int startID, int halfID)
+            : this(startID, halfID, -1)
+        {
+        }
+
 		[Constructable]
-		public DamageableItem(int StartID, int HalfID, int destroyID = -1)
-			: base(StartID)
+        public DamageableItem(int startID, int halfID, int destroyID = -1)
+            : base(startID)
 		{
 			Hue = 0;
 			Movable = false;
 
 			Level = ItemLevel.NotSet;
 
-			IDStart = StartID;
-			IDHalfHits = HalfID;
+			IDStart = startID;
+			IDHalfHits = halfID;
             IDDestroyed = destroyID;
 		}
 
@@ -282,9 +294,8 @@ namespace Server.Items
 			return true;
 		}
 
-		public virtual void OnDestroyed(WoodenBox lootbox)
+		public virtual void OnAfterDestroyed()
 		{
-			return;
 		}
 
 		public virtual void Damage(int amount, Mobile from)
@@ -368,9 +379,14 @@ namespace Server.Items
                 else if (m_DestroyedID >= 0)
                 {
                     ItemID = m_DestroyedID;
+
+                    if (Spawner != null)
+                        Spawner.Remove(this);
                 }
 
                 Destroyed = true;
+                OnAfterDestroyed();
+
                 return true;
             }
 

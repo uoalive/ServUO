@@ -51,7 +51,8 @@ namespace Server.Items
                         return AddonFitResult.Blocked;
                 }
 
-                from.SendLocalizedMessage(1154596); // Ships placed by this account will now be linked to this lighthouse when they decay. Lost ships will be  found in your house moving crate.
+                if (from != null)
+                    from.SendLocalizedMessage(1154596); // Ships placed by this account will now be linked to this lighthouse when they decay. Lost ships will be  found in your house moving crate.
             }
 
             return result;
@@ -59,14 +60,12 @@ namespace Server.Items
 
         public void DockBoat(BaseBoat boat, BaseHouse house)
         {
-            List<ISpawnable> list = boat.GetMovingEntities();
-
-            foreach (ISpawnable o in list)
+            foreach (var entity in boat.GetEntitiesOnBoard())
             {
-                if (!(o is Item) || o == this || boat.IsComponentItem(o) || o is EffectItem || o == boat.TillerMan)
+                if (!(entity is Item) || entity == this || boat.IsComponentItem(entity) || entity is EffectItem || entity == boat.TillerMan)
                     continue;
 
-                Item item = o as Item;
+                Item item = entity as Item;
 
                 if (!item.Deleted && boat.Contains(item))
                 {
@@ -143,9 +142,6 @@ namespace Server.Items
 
             boat.Refresh();
             boat.Internalize();
-
-            list.Clear();
-            list.TrimExcess();
         }
 
         public static void Configure()
@@ -212,6 +208,7 @@ namespace Server.Items
         public LighthouseAddonDeed(string account)
         {
             Account = account;
+            this.LootType = LootType.Blessed;
         }
 
         public override void OnDoubleClick(Mobile from)

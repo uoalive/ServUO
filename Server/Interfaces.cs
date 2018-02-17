@@ -50,7 +50,7 @@ namespace Server
 
 	public interface ICarvable
 	{
-		void Carve(Mobile from, Item item);
+		bool Carve(Mobile from, Item item);
 	}
 
 	public interface IWeapon
@@ -73,6 +73,7 @@ namespace Server
 		void OnCasterKilled();
 		void OnConnectionChanged();
 		bool OnCasterMoving(Direction d);
+        bool CheckMovement(Mobile caster);
 		bool OnCasterEquiping(Item item);
 		bool OnCasterUsingObject(object o);
 		bool OnCastInTown(Region r);

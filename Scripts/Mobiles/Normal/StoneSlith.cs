@@ -41,19 +41,17 @@ namespace Server.Mobiles
             SetSkill(SkillName.Wrestling, 75.8, 87.4);
             SetSkill(SkillName.Anatomy, 0.0, 2.9);
 
-            PackItem(new DragonBlood(6));
-
             Tamable = true;
             ControlSlots = 2;
             MinTameSkill = 65.1;
-
-            QLPoints = 20;
         }
 
         public StoneSlith(Serial serial)
             : base(serial)
         {
         }
+
+        public override int DragonBlood { get { return 6; } }
 
         public override bool HasBreath
         {
@@ -91,20 +89,12 @@ namespace Server.Mobiles
         {
             base.OnDeath(c);
 
-            if (Utility.RandomDouble() < 0.05)
+            if (!Controlled && Utility.RandomDouble() < 0.05)
             {
-                switch (Utility.Random(2))
-                {
-                    case 0:
-                        c.DropItem(new SlithTongue());
-                        break;
-                    case 1:
-                        c.DropItem(new SlithEye());
-                        break;
-                }
+                c.DropItem(new SlithEye());
             }
 
-            if (Utility.RandomDouble() < 0.25)
+            if (!Controlled && Utility.RandomDouble() < 0.25)
             {
                 switch (Utility.Random(2))
                 {
@@ -117,7 +107,7 @@ namespace Server.Mobiles
                 }
             }
 
-            if (c != null && !c.Deleted && c is Corpse)
+            if (!Controlled && c != null && !c.Deleted && c is Corpse)
             {
                 var corpse = (Corpse) c;
                 if (Utility.RandomDouble() < 0.01 && corpse.Killer != null && !corpse.Killer.Deleted)

@@ -47,8 +47,6 @@ namespace Server
 
 	public delegate void CastSpellRequestEventHandler(CastSpellRequestEventArgs e);
 
-	public delegate void BandageTargetRequestEventHandler(BandageTargetRequestEventArgs e);
-
 	public delegate void AnimateRequestEventHandler(AnimateRequestEventArgs e);
 
 	public delegate void LogoutEventHandler(LogoutEventArgs e);
@@ -68,8 +66,6 @@ namespace Server
 	public delegate void VirtueItemRequestEventHandler(VirtueItemRequestEventArgs e);
 
 	public delegate void VirtueMacroRequestEventHandler(VirtueMacroRequestEventArgs e);
-
-	public delegate void ChatRequestEventHandler(ChatRequestEventArgs e);
 
 	public delegate void AccountLoginEventHandler(AccountLoginEventArgs e);
 
@@ -107,6 +103,8 @@ namespace Server
 
 	public delegate void ClientVersionReceivedHandler(ClientVersionReceivedArgs e);
 
+    public delegate void ClientTypeReceivedHandler(ClientTypeReceivedArgs e);
+
 	public delegate void OnKilledByEventHandler(OnKilledByEventArgs e);
 
 	public delegate void OnItemUseEventHandler(OnItemUseEventArgs e);
@@ -135,7 +133,19 @@ namespace Server
 
 	public delegate void MobileDeletedEventHandler(MobileDeletedEventArgs e);
 
-	public class ClientVersionReceivedArgs : EventArgs
+    public delegate void TargetedSpellEventHandler(TargetedSpellEventArgs e);
+
+    public delegate void TargetedSkillEventHandler(TargetedSkillEventArgs e);
+
+    public delegate void TargetedItemUseEventHandler(TargetedItemUseEventArgs e);
+
+    public delegate void EquipMacroEventHandler(EquipMacroEventArgs e);
+
+    public delegate void UnequipMacroEventHandler(UnequipMacroEventArgs e);
+
+    public delegate void TargetByResourceMacroEventHandler(TargetByResourceMacroEventArgs e);
+
+    public class ClientVersionReceivedArgs : EventArgs
 	{
 		private readonly NetState m_State;
 		private readonly ClientVersion m_Version;
@@ -149,6 +159,18 @@ namespace Server
 			m_Version = cv;
 		}
 	}
+
+    public class ClientTypeReceivedArgs : EventArgs
+    {
+        private readonly NetState m_State;
+
+        public NetState State { get { return m_State; } }
+
+        public ClientTypeReceivedArgs(NetState state)
+        {
+            m_State = state;
+        }
+    }
 
 	public class CreateGuildEventArgs : EventArgs
 	{
@@ -398,18 +420,6 @@ namespace Server
 		}
 	}
 
-	public class ChatRequestEventArgs : EventArgs
-	{
-		private readonly Mobile m_Mobile;
-
-		public Mobile Mobile { get { return m_Mobile; } }
-
-		public ChatRequestEventArgs(Mobile mobile)
-		{
-			m_Mobile = mobile;
-		}
-	}
-
 	public class PlayerDeathEventArgs : EventArgs
 	{
 		private readonly Mobile m_Mobile;
@@ -520,24 +530,6 @@ namespace Server
 			m_Mobile = m;
 			m_Spellbook = book;
 			m_SpellID = spellID;
-		}
-	}
-
-	public class BandageTargetRequestEventArgs : EventArgs
-	{
-		private readonly Mobile m_Mobile;
-		private readonly Item m_Bandage;
-		private readonly Mobile m_Target;
-
-		public Mobile Mobile { get { return m_Mobile; } }
-		public Item Bandage { get { return m_Bandage; } }
-		public Mobile Target { get { return m_Target; } }
-
-		public BandageTargetRequestEventArgs(Mobile m, Item bandage, Mobile target)
-		{
-			m_Mobile = m;
-			m_Bandage = bandage;
-			m_Target = target;
 		}
 	}
 
@@ -729,10 +721,11 @@ namespace Server
 		private readonly int m_Str;
 		private readonly int m_Dex;
 		private readonly int m_Int;
-
 		private readonly Race m_Race;
+        private readonly int m_Face;
+        private readonly int m_FaceHue;
 
-		public NetState State { get { return m_State; } }
+        public NetState State { get { return m_State; } }
 		public IAccount Account { get { return m_Account; } }
 		public Mobile Mobile { get; set; }
 		public string Name { get { return m_Name; } }
@@ -751,8 +744,33 @@ namespace Server
 		public int BeardHue { get { return m_BeardHue; } }
 		public int Profession { get; set; }
 		public Race Race { get { return m_Race; } }
+        public int FaceID { get { return m_Face; } }
+        public int FaceHue { get { return m_FaceHue; } }
 
-		public CharacterCreatedEventArgs(
+        public CharacterCreatedEventArgs(
+            NetState state,
+            IAccount a,
+            string name,
+            bool female,
+            int hue,
+            int str,
+            int dex,
+            int intel,
+            CityInfo city,
+            SkillNameValue[] skills,
+            int shirtHue,
+            int pantsHue,
+            int hairID,
+            int hairHue,
+            int beardID,
+            int beardHue,
+            int profession,
+            Race race)
+            : this(state, a, name, female, hue, str, dex, intel, city, skills, shirtHue, pantsHue, hairID, hairHue, beardID, beardHue, profession, race, 0, 0)
+        {
+        }
+
+        public CharacterCreatedEventArgs(
 			NetState state,
 			IAccount a,
 			string name,
@@ -770,7 +788,9 @@ namespace Server
 			int beardID,
 			int beardHue,
 			int profession,
-			Race race)
+			Race race,
+            int faceID,
+            int faceHue)
 		{
 			m_State = state;
 			m_Account = a;
@@ -790,7 +810,9 @@ namespace Server
 			m_BeardHue = beardHue;
 			Profession = profession;
 			m_Race = race;
-		}
+            m_Face = faceID;
+            m_FaceHue = faceHue;
+        }
 	}
 
 	public class OpenDoorMacroEventArgs : EventArgs
@@ -930,16 +952,19 @@ namespace Server
 	public class OnEnterRegionEventArgs : EventArgs
 	{
 		private readonly Mobile m_From;
-		private readonly Region m_Region;
+        private readonly Region m_OldRegion;
+		private readonly Region m_NewRegion;
 
-		public OnEnterRegionEventArgs(Mobile from, Region region)
+		public OnEnterRegionEventArgs(Mobile from, Region oldRegion, Region newRegion)
 		{
 			m_From = from;
-			m_Region = region;
+            m_OldRegion = oldRegion;
+			m_NewRegion = newRegion;
 		}
 
 		public Mobile From { get { return m_From; } }
-		public Region Region { get { return m_Region; } }
+		public Region OldRegion { get { return m_OldRegion; } }
+        public Region NewRegion { get { return m_NewRegion; } }
 	}
 
 	public class OnConsumeEventArgs : EventArgs
@@ -1092,7 +1117,109 @@ namespace Server
 		}
 	}
 
-	public static class EventSink
+    public class TargetedSpellEventArgs : EventArgs
+    {
+        private Mobile m_Mobile;
+        private IEntity m_Target;
+        private short m_SpellID;
+
+        public Mobile Mobile { get { return m_Mobile; } }
+        public IEntity Target { get { return m_Target; } }
+        public short SpellID { get { return m_SpellID; } }
+
+        public TargetedSpellEventArgs(Mobile m, IEntity target, short spellID)
+        {
+            m_Mobile = m;
+            m_Target = target;
+            m_SpellID = spellID;
+        }
+    }
+
+    public class TargetedSkillEventArgs : EventArgs
+    {
+        private Mobile m_Mobile;
+        private IEntity m_Target;
+        private short m_SkillID;
+
+        public Mobile Mobile { get { return m_Mobile; } }
+        public IEntity Target { get { return m_Target; } }
+        public short SkillID { get { return m_SkillID; } }
+
+        public TargetedSkillEventArgs(Mobile m, IEntity target, short skillID)
+        {
+            m_Mobile = m;
+            m_Target = target;
+            m_SkillID = skillID;
+        }
+    }
+
+    public class TargetedItemUseEventArgs : EventArgs
+    {
+        private Mobile m_Mobile;
+        private IEntity m_Source;
+        private IEntity m_Target;
+
+        public Mobile Mobile { get { return m_Mobile; } }
+        public IEntity Source { get { return m_Source; } }
+        public IEntity Target { get { return m_Target; } }
+
+        public TargetedItemUseEventArgs(Mobile mobile, IEntity src, IEntity target)
+        {
+            m_Mobile = mobile;
+            m_Source = src;
+            m_Target = target;
+        }
+    }
+
+    public class TargetByResourceMacroEventArgs : EventArgs
+    {
+        private Mobile m_Mobile;
+        private Item m_Tool;
+        private int m_ResourceType;
+
+        public Mobile Mobile { get { return m_Mobile; } }
+        public Item Tool { get { return m_Tool; } }
+        public int ResourceType { get { return m_ResourceType; } }
+
+        public TargetByResourceMacroEventArgs(Mobile mobile, Item tool, int type)
+        {
+            m_Mobile = mobile;
+            m_Tool = tool;
+            m_ResourceType = type;
+        }
+    }
+
+    public class EquipMacroEventArgs : EventArgs
+    {
+        private Mobile m_Mobile;
+        private List<int> m_List;
+
+        public Mobile Mobile { get { return m_Mobile; } }
+        public List<int> List { get { return m_List; } }
+
+        public EquipMacroEventArgs(Mobile mobile, List<int> list)
+        {
+            m_Mobile = mobile;
+            m_List = list;
+        }
+    }
+
+    public class UnequipMacroEventArgs : EventArgs
+    {
+        private Mobile m_Mobile;
+        private List<int> m_List;
+
+        public Mobile Mobile { get { return m_Mobile; } }
+        public List<int> List { get { return m_List; } }
+
+        public UnequipMacroEventArgs(Mobile mobile, List<int> list)
+        {
+            m_Mobile = mobile;
+            m_List = list;
+        }
+    }
+
+    public static class EventSink
 	{
 		public static event CharacterCreatedEventHandler CharacterCreated;
 		public static event OpenDoorMacroEventHandler OpenDoorMacroUsed;
@@ -1108,7 +1235,6 @@ namespace Server
 		public static event StunRequestEventHandler StunRequest;
 		public static event OpenSpellbookRequestEventHandler OpenSpellbookRequest;
 		public static event CastSpellRequestEventHandler CastSpellRequest;
-		public static event BandageTargetRequestEventHandler BandageTargetRequest;
 		public static event AnimateRequestEventHandler AnimateRequest;
 		public static event LogoutEventHandler Logout;
 		public static event SocketConnectEventHandler SocketConnect;
@@ -1119,7 +1245,6 @@ namespace Server
 		public static event VirtueGumpRequestEventHandler VirtueGumpRequest;
 		public static event VirtueItemRequestEventHandler VirtueItemRequest;
 		public static event VirtueMacroRequestEventHandler VirtueMacroRequest;
-		public static event ChatRequestEventHandler ChatRequest;
 		public static event AccountLoginEventHandler AccountLogin;
 		public static event PaperdollRequestEventHandler PaperdollRequest;
 		public static event ProfileRequestEventHandler ProfileRequest;
@@ -1139,6 +1264,7 @@ namespace Server
 		public static event GuildGumpRequestHandler GuildGumpRequest;
 		public static event QuestGumpRequestHandler QuestGumpRequest;
 		public static event ClientVersionReceivedHandler ClientVersionReceived;
+        public static event ClientTypeReceivedHandler ClientTypeReceived;
 		public static event OnKilledByEventHandler OnKilledBy;
 		public static event OnItemUseEventHandler OnItemUse;
 		public static event OnEnterRegionEventHandler OnEnterRegion;
@@ -1155,13 +1281,28 @@ namespace Server
 		public static event MobileCreatedEventHandler MobileCreated;
 		public static event MobileDeletedEventHandler MobileDeleted;
 
-		public static void InvokeClientVersionReceived(ClientVersionReceivedArgs e)
+        public static event TargetedSpellEventHandler TargetedSpell;
+        public static event TargetedSkillEventHandler TargetedSkill;
+        public static event TargetedItemUseEventHandler TargetedItemUse;
+        public static event EquipMacroEventHandler EquipMacro;
+        public static event UnequipMacroEventHandler UnequipMacro;
+        public static event TargetByResourceMacroEventHandler TargetByResourceMacro;
+
+        public static void InvokeClientVersionReceived(ClientVersionReceivedArgs e)
 		{
 			if (ClientVersionReceived != null)
 			{
 				ClientVersionReceived(e);
 			}
 		}
+
+        public static void InvokeClientTypeReceived(ClientTypeReceivedArgs e)
+        {
+            if (ClientTypeReceived != null)
+            {
+                ClientTypeReceived(e);
+            }
+        }
 
 		public static void InvokeServerStarted()
 		{
@@ -1275,14 +1416,6 @@ namespace Server
 			}
 		}
 
-		public static void InvokeChatRequest(ChatRequestEventArgs e)
-		{
-			if (ChatRequest != null)
-			{
-				ChatRequest(e);
-			}
-		}
-
 		public static void InvokeVirtueItemRequest(VirtueItemRequestEventArgs e)
 		{
 			if (VirtueItemRequest != null)
@@ -1368,14 +1501,6 @@ namespace Server
 			if (CastSpellRequest != null)
 			{
 				CastSpellRequest(e);
-			}
-		}
-
-		public static void InvokeBandageTargetRequest(BandageTargetRequestEventArgs e)
-		{
-			if (BandageTargetRequest != null)
-			{
-				BandageTargetRequest(e);
 			}
 		}
 
@@ -1627,7 +1752,55 @@ namespace Server
 			}
 		}
 
-		public static void Reset()
+        public static void InvokeTargetedSpell(TargetedSpellEventArgs e)
+        {
+            if (TargetedSpell != null)
+            {
+                TargetedSpell(e);
+            }
+        }
+
+        public static void InvokeTargetedSkill(TargetedSkillEventArgs e)
+        {
+            if (TargetedSkill != null)
+            {
+                TargetedSkill(e);
+            }
+        }
+
+        public static void InvokeTargetedItemUse(TargetedItemUseEventArgs e)
+        {
+            if (TargetedItemUse != null)
+            {
+                TargetedItemUse(e);
+            }
+        }
+
+        public static void InvokeTargetByResourceMacro(TargetByResourceMacroEventArgs e)
+        {
+            if (TargetByResourceMacro != null)
+            {
+                TargetByResourceMacro(e);
+            }
+        }
+
+        public static void InvokeEquipMacro(EquipMacroEventArgs e)
+        {
+            if (EquipMacro != null)
+            {
+                EquipMacro(e);
+            }
+        }
+
+        public static void InvokeUnequipMacro(UnequipMacroEventArgs e)
+        {
+            if (UnequipMacro != null)
+            {
+                UnequipMacro(e);
+            }
+        }
+
+        public static void Reset()
 		{
 			CharacterCreated = null;
 			OpenDoorMacroUsed = null;
@@ -1643,7 +1816,6 @@ namespace Server
 			StunRequest = null;
 			OpenSpellbookRequest = null;
 			CastSpellRequest = null;
-			BandageTargetRequest = null;
 			AnimateRequest = null;
 			Logout = null;
 			SocketConnect = null;
@@ -1654,7 +1826,6 @@ namespace Server
 			VirtueGumpRequest = null;
 			VirtueItemRequest = null;
 			VirtueMacroRequest = null;
-			ChatRequest = null;
 			AccountLogin = null;
 			PaperdollRequest = null;
 			ProfileRequest = null;
@@ -1678,11 +1849,15 @@ namespace Server
 			ResourceHarvestAttempt = null;
 			ResourceHarvestSuccess = null;
 			CraftSuccess = null;
-			
+
 			ItemCreated = null;
 			ItemDeleted = null;
 			MobileCreated = null;
 			MobileDeleted = null;
-		}
+
+            TargetedSpell = null;
+            TargetedSkill = null;
+            TargetedItemUse = null;
+        }
 	}
 }

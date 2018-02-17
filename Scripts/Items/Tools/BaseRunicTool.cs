@@ -45,20 +45,19 @@ namespace Server.Items
         };
         private static readonly BitArray m_Props = new BitArray(MaxProperties);
         private static readonly int[] m_Possible = new int[MaxProperties];
-        private static bool m_IsRunicTool;
+        private static bool m_PlayerMade;
         private static int m_LuckChance;
         private const int MaxProperties = 32;
-        private CraftResource m_Resource;
         public BaseRunicTool(CraftResource resource, int itemID)
             : base(itemID)
         {
-            this.m_Resource = resource;
+            Resource = resource;
         }
 
         public BaseRunicTool(CraftResource resource, int uses, int itemID)
             : base(uses, itemID)
         {
-            this.m_Resource = resource;
+            Resource = resource;
         }
 
         public BaseRunicTool(Serial serial)
@@ -98,20 +97,6 @@ namespace Server.Items
         }
         #endregion
 
-        [CommandProperty(AccessLevel.GameMaster)]
-        public CraftResource Resource
-        {
-            get
-            {
-                return this.m_Resource;
-            }
-            set
-            {
-                this.m_Resource = value;
-                this.Hue = CraftResources.GetHue(this.m_Resource);
-                this.InvalidateProperties();
-            }
-        }
         public static int GetUniqueRandom(int count)
         {
             int avail = 0;
@@ -135,7 +120,7 @@ namespace Server.Items
         #region High Seas
         public void ApplyAttributesTo(FishingPole pole)
         {
-            CraftResourceInfo resInfo = CraftResources.GetInfo(m_Resource);
+            CraftResourceInfo resInfo = CraftResources.GetInfo(Resource);
 
             if (resInfo == null)
                 return;
@@ -149,9 +134,9 @@ namespace Server.Items
             ApplyAttributesTo(pole, true, 0, attributeCount, min, max);
         }
 
-        public static void ApplyAttributesTo(FishingPole pole, bool isRunicTool, int luckChance, int attributeCount, int min, int max)
+        public static void ApplyAttributesTo(FishingPole pole, bool playerMade, int luckChance, int attributeCount, int min, int max)
         {
-            m_IsRunicTool = isRunicTool;
+            m_PlayerMade = playerMade;
             m_LuckChance = luckChance;
 
             AosAttributes primary = pole.Attributes;
@@ -196,9 +181,15 @@ namespace Server.Items
             ApplyAttributesTo(weapon, false, 0, attributeCount, min, max);
         }
 
-        public static void ApplyAttributesTo(BaseWeapon weapon, bool isRunicTool, int luckChance, int attributeCount, int min, int max)
+        public static void ApplyAttributesTo(BaseWeapon weapon, bool playerMade, int luckChance, int attributeCount, int min, int max)
         {
-            m_IsRunicTool = isRunicTool;
+            if (!playerMade && RandomItemGenerator.Enabled)
+            {
+                RandomItemGenerator.GenerateRandomItem(weapon, luckChance, attributeCount, min, max);
+                return;
+            }
+
+            m_PlayerMade = playerMade;
             m_LuckChance = luckChance;
 
             AosAttributes primary = weapon.Attributes;
@@ -349,69 +340,16 @@ namespace Server.Items
                         weapon.Slayer = GetRandomSlayer();
                         break;
                     case 24:
-                        GetElementalDamages(weapon);
+                        ApplyElementalDamage(weapon, min, max);
                         break;
                     case 25:
-                        BaseRanged brb = weapon as BaseRanged;
-                        brb.Balanced = true;
+                        ((BaseRanged)weapon).Balanced = true;
                         break;
                     case 26:
-                        BaseRanged brv = weapon as BaseRanged;
-                    	brv.Velocity = (Utility.RandomMinMax(2,50));
+                        ApplyVelocityAttribute((BaseRanged)weapon, min, max, 2, 50, 2);
                    		break;
                 }
             }
-        }
-
-        public static void GetElementalDamages(BaseWeapon weapon)
-        {
-            GetElementalDamages(weapon, true);
-        }
-
-        public static void GetElementalDamages(BaseWeapon weapon, bool randomizeOrder)
-        {
-            int fire, phys, cold, nrgy, pois, chaos, direct;
-
-            weapon.GetDamageTypes(null, out phys, out fire, out cold, out pois, out nrgy, out chaos, out direct);
-
-            int totalDamage = phys;
-
-            AosElementAttribute[] attrs = new AosElementAttribute[]
-            {
-                AosElementAttribute.Cold,
-                AosElementAttribute.Energy,
-                AosElementAttribute.Fire,
-                AosElementAttribute.Poison
-            };
-
-            if (randomizeOrder)
-            {
-                for (int i = 0; i < attrs.Length; i++)
-                {
-                    int rand = Utility.Random(attrs.Length);
-                    AosElementAttribute temp = attrs[i];
-
-                    attrs[i] = attrs[rand];
-                    attrs[rand] = temp;
-                }
-            }
-
-            /*
-            totalDamage = AssignElementalDamage( weapon, AosElementAttribute.Cold,		totalDamage );
-            totalDamage = AssignElementalDamage( weapon, AosElementAttribute.Energy,	totalDamage );
-            totalDamage = AssignElementalDamage( weapon, AosElementAttribute.Fire,		totalDamage );
-            totalDamage = AssignElementalDamage( weapon, AosElementAttribute.Poison,	totalDamage );
-
-            weapon.AosElementDamages[AosElementAttribute.Physical] = 100 - totalDamage;
-            * */
-
-            for (int i = 0; i < attrs.Length; i++)
-                totalDamage = AssignElementalDamage(weapon, attrs[i], totalDamage);
-
-            //Order is Cold, Energy, Fire, Poison -> Physical left
-            //Cannot be looped, AoselementAttribute is 'out of order'
-
-            weapon.Hue = weapon.GetElementalDamageHue();
         }
 
         public static SlayerName GetRandomSlayer()
@@ -422,7 +360,7 @@ namespace Server.Items
             if (groups.Length == 0)
                 return SlayerName.None;
 
-            SlayerGroup group = groups[Utility.Random(groups.Length - 1)]; //-1 To Exclude the Fey Slayer which appears ONLY on a certain artifact.
+            SlayerGroup group = groups[Utility.Random(6)]; //-1 To Exclude the Fey Slayer which appears ONLY on a certain artifact.
             SlayerEntry entry;
 
             if (group.Entries.Length == 0 || 10 > Utility.Random(100)) // 10% chance to do super slayer
@@ -443,9 +381,15 @@ namespace Server.Items
             ApplyAttributesTo(armor, false, 0, attributeCount, min, max);
         }
 
-        public static void ApplyAttributesTo(BaseArmor armor, bool isRunicTool, int luckChance, int attributeCount, int min, int max)
+        public static void ApplyAttributesTo(BaseArmor armor, bool playerMade, int luckChance, int attributeCount, int min, int max)
         {
-            m_IsRunicTool = isRunicTool;
+            if (!playerMade && RandomItemGenerator.Enabled)
+            {
+                RandomItemGenerator.GenerateRandomItem(armor, luckChance, attributeCount, min, max);
+                return;
+            }
+
+            m_PlayerMade = playerMade;
             m_LuckChance = luckChance;
 
             AosAttributes primary = armor.Attributes;
@@ -570,9 +514,15 @@ namespace Server.Items
             ApplyAttributesTo(hat, false, 0, attributeCount, min, max);
         }
 
-        public static void ApplyAttributesTo(BaseHat hat, bool isRunicTool, int luckChance, int attributeCount, int min, int max)
+        public static void ApplyAttributesTo(BaseHat hat, bool playerMade, int luckChance, int attributeCount, int min, int max)
         {
-            m_IsRunicTool = isRunicTool;
+            if (!playerMade && RandomItemGenerator.Enabled)
+            {
+                RandomItemGenerator.GenerateRandomItem(hat, luckChance, attributeCount, min, max);
+                return;
+            }
+
+            m_PlayerMade = playerMade;
             m_LuckChance = luckChance;
 
             AosAttributes primary = hat.Attributes;
@@ -656,9 +606,15 @@ namespace Server.Items
             ApplyAttributesTo(jewelry, false, 0, attributeCount, min, max);
         }
 
-        public static void ApplyAttributesTo(BaseJewel jewelry, bool isRunicTool, int luckChance, int attributeCount, int min, int max)
+        public static void ApplyAttributesTo(BaseJewel jewelry, bool playerMade, int luckChance, int attributeCount, int min, int max)
         {
-            m_IsRunicTool = isRunicTool;
+            if (!playerMade && RandomItemGenerator.Enabled)
+            {
+                RandomItemGenerator.GenerateRandomItem(jewelry, luckChance, attributeCount, min, max);
+                return;
+            }
+
+            m_PlayerMade = playerMade;
             m_LuckChance = luckChance;
 
             AosAttributes primary = jewelry.Attributes;
@@ -757,9 +713,9 @@ namespace Server.Items
             ApplyAttributesTo(spellbook, false, 0, attributeCount, min, max);
         }
 
-        public static void ApplyAttributesTo(Spellbook spellbook, bool isRunicTool, int luckChance, int attributeCount, int min, int max)
+        public static void ApplyAttributesTo(Spellbook spellbook, bool playerMade, int luckChance, int attributeCount, int min, int max)
         {
-            m_IsRunicTool = isRunicTool;
+            m_PlayerMade = playerMade;
             m_LuckChance = luckChance;
 
             AosAttributes primary = spellbook.Attributes;
@@ -833,7 +789,7 @@ namespace Server.Items
             base.Serialize(writer);
 
             writer.Write((int)0); // version
-            writer.Write((int)this.m_Resource);
+            writer.Write((int)Resource);
         }
 
         public override void Deserialize(GenericReader reader)
@@ -846,7 +802,7 @@ namespace Server.Items
             {
                 case 0:
                     {
-                        this.m_Resource = (CraftResource)reader.ReadInt();
+                        Resource = (CraftResource)reader.ReadInt();
                         break;
                     }
             }
@@ -854,7 +810,7 @@ namespace Server.Items
 
         public void ApplyAttributesTo(BaseWeapon weapon)
         {
-            CraftResourceInfo resInfo = CraftResources.GetInfo(this.m_Resource);
+            CraftResourceInfo resInfo = CraftResources.GetInfo(Resource);
 
             if (resInfo == null)
                 return;
@@ -873,7 +829,7 @@ namespace Server.Items
 
         public void ApplyAttributesTo(BaseArmor armor)
         {
-            CraftResourceInfo resInfo = CraftResources.GetInfo(this.m_Resource);
+            CraftResourceInfo resInfo = CraftResources.GetInfo(Resource);
 
             if (resInfo == null)
                 return;
@@ -894,7 +850,7 @@ namespace Server.Items
         {
             int percent;
 
-            if (m_IsRunicTool)
+            if (m_PlayerMade)
             {
                 percent = Utility.RandomMinMax(min, max);
             }
@@ -972,6 +928,32 @@ namespace Server.Items
         {
             attrs[attr] = Scale(min, max, low / scale, high / scale) * scale;
         }
+
+        private static void ApplyVelocityAttribute(BaseRanged ranged, int min, int max, int low, int high, int scale)
+        {
+            ranged.Velocity = Scale(min, max, low / scale, high / scale) * scale;
+        }
+
+        public static void ApplyElementalDamage(BaseWeapon weapon, int min, int max)
+        {
+            int fire, phys, cold, nrgy, pois, chaos, direct;
+
+            weapon.GetDamageTypes(null, out phys, out fire, out cold, out pois, out nrgy, out chaos, out direct);
+
+            int intensity = Math.Min(phys, Scale(min, max, 10 / 10, 100 / 10) * 10);
+
+            weapon.AosElementDamages[_DamageTypes[Utility.Random(_DamageTypes.Length)]] = intensity;
+
+            weapon.Hue = weapon.GetElementalDamageHue();
+        }
+
+        private static AosElementAttribute[] _DamageTypes =
+        {
+            AosElementAttribute.Cold,
+            AosElementAttribute.Energy,
+            AosElementAttribute.Fire,
+            AosElementAttribute.Poison
+        };
 
         private static void ApplySkillBonus(AosSkillBonuses attrs, int min, int max, int index, int low, int high)
         {

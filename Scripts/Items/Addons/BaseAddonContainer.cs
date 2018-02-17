@@ -12,6 +12,8 @@ namespace Server.Items
         public BaseAddonContainer(int itemID)
             : base(itemID)
         {
+            Movable = false;
+
             AddonComponent.ApplyLightTo(this);
 
             this.m_Components = new List<AddonContainerComponent>();
@@ -148,6 +150,17 @@ namespace Server.Items
             if (house != null)
                 house.Addons.Remove(this);
 
+            List<AddonContainerComponent> components = new List<AddonContainerComponent>(m_Components);
+
+            foreach (AddonContainerComponent component in components)
+            {
+                component.Addon = null;
+                component.Delete();
+            }
+
+            components.Clear();
+            components.TrimExcess();
+
             base.OnDelete();
         }
 
@@ -247,7 +260,7 @@ namespace Server.Items
 
             if (house != null)
             {
-                ArrayList doors = house.Doors;
+                var doors = house.Doors;
 
                 for (int i = 0; i < doors.Count; ++i)
                 {
@@ -339,6 +352,10 @@ namespace Server.Items
 
         public virtual void OnComponentUsed(AddonContainerComponent c, Mobile from)
         {
+            if (!Deleted)
+            {
+                OnDoubleClick(from);
+            }
         }
     }
 }

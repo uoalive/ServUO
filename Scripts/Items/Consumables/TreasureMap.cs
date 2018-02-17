@@ -4,9 +4,6 @@
 // **********
 #endregion
 
-//TODO: Implement skeleton keys, and fail lockpick destroying items.
-//TODO: Implement Facet in MapItem and new Map packet
-
 #region References
 using System;
 using System.Collections.Generic;
@@ -85,7 +82,7 @@ namespace Server.Items
 			new Type[]{ typeof( LeatherWolf ), typeof( StoneSlith ), typeof( ToxicSlith ) },
 			new Type[]{ typeof( BloodWorm ), typeof( Kepetch ), typeof( StoneSlith ), typeof( ToxicSlith ) },
 			new Type[]{ typeof( FireAnt ), typeof( LavaElemental ), typeof( MaddeningHorror ) },
-			new Type[]{ typeof( EnragedEarthElemental ), typeof( FireDaemon ), typeof( GreaterPoisonElemental ), typeof( LavaElemental ) },
+			new Type[]{ typeof( EnragedEarthElemental ), typeof( FireDaemon ), typeof( GreaterPoisonElemental ), typeof( LavaElemental ), typeof( DragonWolf ) },
             new Type[]{ typeof( EnragedColossus ), typeof( EnragedEarthElemental ), typeof( FireDaemon ), typeof( GreaterPoisonElemental ), typeof( LavaElemental ) }
         };
         #endregion
@@ -274,7 +271,6 @@ namespace Server.Items
             }
         }
 
-        [Constructable]
         public TreasureMap()
         {
         }
@@ -326,8 +322,7 @@ namespace Server.Items
 
             AddWorldPin(m_Location.X, m_Location.Y);
 
-            if (map != Map.Trammel && map != Map.Felucca)
-                m_NextReset = DateTime.UtcNow + ResetTime;
+            m_NextReset = DateTime.UtcNow + ResetTime;
         }
 
         public Map GetRandomMap()
@@ -406,8 +401,6 @@ namespace Server.Items
                         return false;
                 }
             }
-
-
 
             //Checks for roads
             for (int i = 0; i < Server.Multis.HousePlacement.RoadIDs.Length; i += 2)
@@ -525,6 +518,10 @@ namespace Server.Items
                 if (y2 <= 2760)
                     y2 = 2761;
             }
+        }
+
+        public virtual void OnMapComplete(TreasureMapChest chest)
+        {
         }
 
         public TreasureMap(Serial serial)
@@ -788,6 +785,7 @@ namespace Server.Items
                 m_Decoder = null;
                 GetRandomLocation(Facet);
                 InvalidateProperties();
+                m_NextReset = DateTime.UtcNow + ResetTime;
             }
         }
 
@@ -810,6 +808,11 @@ namespace Server.Items
             else
             {
                 SendLocalizedMessageTo(from, 503017); // The treasure is marked by the red pin. Grab a shovel and go dig it up!
+            }
+
+            if (Pins.Count == 0)
+            {
+                AddWorldPin(ChestLocation.X, ChestLocation.Y);
             }
 
             from.PlaySound(0x249);
@@ -959,9 +962,15 @@ namespace Server.Items
                         break;
                     }
             }
+
             if (Core.AOS && m_Decoder != null && LootType == LootType.Regular)
             {
                 LootType = LootType.Blessed;
+            }
+
+            if (m_NextReset == DateTime.MinValue)
+            {
+                m_NextReset = DateTime.UtcNow + ResetTime;
             }
         }
 
@@ -1336,6 +1345,8 @@ namespace Server.Items
                     m_TreasureMap.Completed = true;
                     m_TreasureMap.CompletedBy = m_From;
 
+                    m_TreasureMap.OnMapComplete(m_Chest);
+
                     int spawns;
                     switch (m_TreasureMap.Level)
                     {
@@ -1364,7 +1375,14 @@ namespace Server.Items
                 {
                     if (m_From.Body.IsHuman && !m_From.Mounted)
                     {
-                        m_From.Animate(11, 5, 1, true, false, 0);
+                        if (Core.SA)
+                        {
+                            m_From.Animate(AnimationType.Attack, 3);
+                        }
+                        else
+                        {
+                            m_From.Animate(11, 5, 1, true, false, 0);
+                        }
                     }
 
                     new SoundTimer(m_From, 0x125 + (m_Count % 2)).Start();

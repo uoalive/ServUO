@@ -38,7 +38,7 @@ namespace Server.Engines.Quests
                 if (quest != null)
                 {
                     quest.Owner = from;
-                    quest.Quester = quester;					
+                    quest.Quester = quester;				
 				
                     if (CanOffer(from, quest, quests.Length == 1))
                         return quest;
@@ -79,8 +79,8 @@ namespace Server.Engines.Quests
                     for (int k = pQuest.Objectives.Count - 1; k >= 0; k --)
                     {
                         BaseObjective obj = pQuest.Objectives[k];
-						
-                        if (type == obj.Type())
+
+                        if (type == obj.Type() && (quest.ChainID == QuestChain.None || quest.ChainID == pQuest.ChainID))
                             return false;					
                     }
                 }
@@ -172,10 +172,10 @@ namespace Server.Engines.Quests
             {
                 BaseQuest quest = player.Quests[i];
 				
-                if (quest.Quester == null)
+                if (quest.Quester == null && quest.QuesterType == null)
                     continue;
-					
-                if (quest.Quester.GetType() == quester.GetType())
+
+                if (quest.QuesterType == quester.GetType())
                 {
                     if (quest.Completed)		
                     {
@@ -373,7 +373,7 @@ namespace Server.Engines.Quests
         {
             if (from.Backpack == null || itemType == null || amount <= 0)
                 return;
-								
+
             Item[] items = from.Backpack.FindItemsByType(itemType);
 			
             int deleted = 0;
@@ -419,7 +419,7 @@ namespace Server.Engines.Quests
         }
 
         public static void DeleteItems(BaseQuest quest)
-        { 
+        {
             for (int i = 0; i < quest.Objectives.Count; i ++)
             { 
                 BaseObjective objective = quest.Objectives[i];				
@@ -433,7 +433,7 @@ namespace Server.Engines.Quests
         {
             if (quest == null)
                 return false;
-				
+
             for (int i = 0; i < quest.Objectives.Count; i ++)
             {
                 if (quest.Objectives[i] is ObtainObjective)
@@ -726,6 +726,11 @@ namespace Server.Engines.Quests
             return GetQuest( from, typeof( T ) ) != null;
         }
 
+        public static bool HasQuest(PlayerMobile from, Type t)
+        {
+            return GetQuest(from, t) != null;
+        }
+
         public static BaseQuest GetQuest(PlayerMobile from, Type type)
         {
             if (type == null)
@@ -769,11 +774,13 @@ namespace Server.Engines.Quests
                 {
                     Item item = (Item)obj;
 					
-                    if (item.IsChildOf(player.Backpack))
+                    if (item.Parent != null && item.Parent == player.Backpack)
                     {
                         if (!QuestHelper.CheckItem(player, item))
                             player.SendLocalizedMessage(1072355, null, 0x23); // That item does not match any of your quest criteria
                     }
+                    else
+                        player.SendLocalizedMessage(1074769); // An item must be in your backpack (and not in a container within) to be toggled as a quest item.
                 }
                 else
                     player.SendLocalizedMessage(1074769); // An item must be in your backpack (and not in a container within) to be toggled as a quest item.

@@ -41,8 +41,9 @@ namespace Server.Spells.Bushido
             BaseWeapon weapon = attacker.Weapon as BaseWeapon;
 
             List<Mobile> targets = new List<Mobile>();
+            IPooledEnumerable eable = attacker.GetMobilesInRange(weapon.MaxRange);
 
-            foreach (Mobile m in attacker.GetMobilesInRange(weapon.MaxRange))
+            foreach (Mobile m in eable)
             {
                 if (m == defender)
                     continue;
@@ -52,6 +53,7 @@ namespace Server.Spells.Bushido
 
                 targets.Add(m);
             }
+            eable.Free();
 
             if (targets.Count > 0)
             {
@@ -80,6 +82,20 @@ namespace Server.Spells.Bushido
             {
                 attacker.SendLocalizedMessage(1063123); // There are no valid targets to attack!
             }
+        }
+
+        public override void OnUse(Mobile m)
+        {
+            base.OnUse(m);
+
+            BuffInfo.AddBuff(m, new BuffInfo(BuffIcon.MomentumStrike, 1060600, 1063268));
+        }
+
+        public override void OnClearMove(Mobile from)
+        {
+            base.OnClearMove(from);
+
+            BuffInfo.RemoveBuff(from, BuffIcon.MomentumStrike);
         }
 
         public override void CheckGain(Mobile m)

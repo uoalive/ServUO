@@ -7,6 +7,8 @@ using Server.Guilds;
 using Server.Items;
 using Server.Mobiles;
 using Server.Multis;
+using Server.Engines.VvV;
+using Server.Spells.Chivalry;
 
 namespace Server.Misc
 {
@@ -66,70 +68,29 @@ namespace Server.Misc
             if (from == null || target == null || from.IsStaff() || target.IsStaff())
                 return true;
 
-            #region Dueling
-            PlayerMobile pmFrom = from as PlayerMobile;
-            PlayerMobile pmTarg = target as PlayerMobile;
-
-            if (pmFrom == null && from is BaseCreature)
-            {
-                BaseCreature bcFrom = (BaseCreature)from;
-
-                if (bcFrom.Summoned)
-                    pmFrom = bcFrom.SummonMaster as PlayerMobile;
-            }
-
-            if (pmTarg == null && target is BaseCreature)
-            {
-                BaseCreature bcTarg = (BaseCreature)target;
-
-                if (bcTarg.Summoned)
-                    pmTarg = bcTarg.SummonMaster as PlayerMobile;
-            }
-
-            if (pmFrom != null && pmTarg != null)
-            {
-                if (pmFrom.DuelContext != pmTarg.DuelContext && ((pmFrom.DuelContext != null && pmFrom.DuelContext.Started) || (pmTarg.DuelContext != null && pmTarg.DuelContext.Started)))
-                    return false;
-
-                if (pmFrom.DuelContext != null && pmFrom.DuelContext == pmTarg.DuelContext && ((pmFrom.DuelContext.StartedReadyCountdown && !pmFrom.DuelContext.Started) || pmFrom.DuelContext.Tied || pmFrom.DuelPlayer.Eliminated || pmTarg.DuelPlayer.Eliminated))
-                    return false;
-
-                if (pmFrom.DuelPlayer != null && !pmFrom.DuelPlayer.Eliminated && pmFrom.DuelContext != null && pmFrom.DuelContext.IsSuddenDeath)
-                    return false;
-
-                if (pmFrom.DuelContext != null && pmFrom.DuelContext == pmTarg.DuelContext && pmFrom.DuelContext.m_Tournament != null && pmFrom.DuelContext.m_Tournament.IsNotoRestricted && pmFrom.DuelPlayer != null && pmTarg.DuelPlayer != null && pmFrom.DuelPlayer.Participant != pmTarg.DuelPlayer.Participant)
-                    return false;
-
-                if (pmFrom.DuelContext != null && pmFrom.DuelContext == pmTarg.DuelContext && pmFrom.DuelContext.Started)
-                    return true;
-            }
-
-            if ((pmFrom != null && pmFrom.DuelContext != null && pmFrom.DuelContext.Started) || (pmTarg != null && pmTarg.DuelContext != null && pmTarg.DuelContext.Started))
-                return false;
-
-            Engines.ConPVP.SafeZone sz = from.Region.GetRegion(typeof(Engines.ConPVP.SafeZone)) as Engines.ConPVP.SafeZone;
-
-            if (sz != null /*&& sz.IsDisabled()*/)
-                return false;
-
-            sz = target.Region.GetRegion(typeof(Engines.ConPVP.SafeZone)) as Engines.ConPVP.SafeZone;
-
-            if (sz != null /*&& sz.IsDisabled()*/)
-                return false;
-            #endregion
-
             Map map = from.Map;
 
-            #region Factions
-            Faction targetFaction = Faction.Find(target, true);
-
-            if ((!Core.ML || map == Faction.Facet) && targetFaction != null)
+            #region Factions/VvV
+            if (Factions.Settings.Enabled)
             {
-                if (Faction.Find(from, true) != targetFaction)
+                Faction targetFaction = Faction.Find(target, true);
+
+                if ((!Core.ML || map == Faction.Facet) && targetFaction != null)
+                {
+                    if (Faction.Find(from, true) != targetFaction)
+                        return false;
+                }
+            }
+
+            if (ViceVsVirtueSystem.Enabled)
+            {
+                if (ViceVsVirtueSystem.IsEnemy(from, target))
+                {
                     return false;
+                }
             }
             #endregion
-			
+
             #region Mondain's Legacy
             if (target is Gregorio)
                 return false;
@@ -175,59 +136,10 @@ namespace Server.Misc
             {
                 if (Gregorio.IsMurderer(from))
                     return true;
-				
+
                 from.SendLocalizedMessage(1075456); // You are not allowed to damage this NPC unless your on the Guilty Quest
                 return false;
             }
-            #endregion
-			
-            #region Dueling
-            PlayerMobile pmFrom = from as PlayerMobile;
-            PlayerMobile pmTarg = target as PlayerMobile;
-
-            if (pmFrom == null && from is BaseCreature)
-            {
-                BaseCreature bcFrom = (BaseCreature)from;
-
-                if (bcFrom.Summoned)
-                    pmFrom = bcFrom.SummonMaster as PlayerMobile;
-            }
-
-            if (pmTarg == null && target is BaseCreature)
-            {
-                BaseCreature bcTarg = (BaseCreature)target;
-
-                if (bcTarg.Summoned)
-                    pmTarg = bcTarg.SummonMaster as PlayerMobile;
-            }
-
-            if (pmFrom != null && pmTarg != null)
-            {
-                if (pmFrom.DuelContext != pmTarg.DuelContext && ((pmFrom.DuelContext != null && pmFrom.DuelContext.Started) || (pmTarg.DuelContext != null && pmTarg.DuelContext.Started)))
-                    return false;
-
-                if (pmFrom.DuelContext != null && pmFrom.DuelContext == pmTarg.DuelContext && ((pmFrom.DuelContext.StartedReadyCountdown && !pmFrom.DuelContext.Started) || pmFrom.DuelContext.Tied || pmFrom.DuelPlayer.Eliminated || pmTarg.DuelPlayer.Eliminated))
-                    return false;
-
-                if (pmFrom.DuelContext != null && pmFrom.DuelContext == pmTarg.DuelContext && pmFrom.DuelContext.m_Tournament != null && pmFrom.DuelContext.m_Tournament.IsNotoRestricted && pmFrom.DuelPlayer != null && pmTarg.DuelPlayer != null && pmFrom.DuelPlayer.Participant == pmTarg.DuelPlayer.Participant)
-                    return false;
-
-                if (pmFrom.DuelContext != null && pmFrom.DuelContext == pmTarg.DuelContext && pmFrom.DuelContext.Started)
-                    return true;
-            }
-
-            if ((pmFrom != null && pmFrom.DuelContext != null && pmFrom.DuelContext.Started) || (pmTarg != null && pmTarg.DuelContext != null && pmTarg.DuelContext.Started))
-                return false;
-
-            Engines.ConPVP.SafeZone sz = from.Region.GetRegion(typeof(Engines.ConPVP.SafeZone)) as Engines.ConPVP.SafeZone;
-
-            if (sz != null /*&& sz.IsDisabled()*/)
-                return false;
-
-            sz = target.Region.GetRegion(typeof(Engines.ConPVP.SafeZone)) as Engines.ConPVP.SafeZone;
-
-            if (sz != null /*&& sz.IsDisabled()*/)
-                return false;
             #endregion
 
             Map map = from.Map;
@@ -317,10 +229,16 @@ namespace Server.Misc
                         return Notoriety.Enemy;
                 }
 
-                Faction srcFaction = Faction.Find(source, true, true);
-                Faction trgFaction = Faction.Find(target.Owner, true, true);
+                if (Factions.Settings.Enabled)
+                {
+                    Faction srcFaction = Faction.Find(source, true, true);
+                    Faction trgFaction = Faction.Find(target.Owner, true, true);
 
-                if (srcFaction != null && trgFaction != null && srcFaction != trgFaction && source.Map == Faction.Facet)
+                    if (srcFaction != null && trgFaction != null && srcFaction != trgFaction && source.Map == Faction.Facet)
+                        return Notoriety.Enemy;
+                }
+
+                if (ViceVsVirtueSystem.Enabled && ViceVsVirtueSystem.IsEnemy(source, target.Owner) && source.Map == Faction.Facet)
                     return Notoriety.Enemy;
 
                 if (CheckHouseFlag(source, target.Owner, target.Location, target.Map))
@@ -400,9 +318,9 @@ namespace Server.Misc
             }
         }
 
-        public static int MobileNotoriety(Mobile source, IDamageable damagable)
+        public static int MobileNotoriety(Mobile source, IDamageable damageable)
         {
-            Mobile target = damagable as Mobile;
+            Mobile target = damageable as Mobile;
 
             if (target == null)
                 return Notoriety.CanBeAttacked;
@@ -410,16 +328,16 @@ namespace Server.Misc
             if (Core.AOS && (target.Blessed || (target is BaseVendor && ((BaseVendor)target).IsInvulnerable) || target is PlayerVendor || target is TownCrier))
                 return Notoriety.Invulnerable;
 
-            #region Dueling
-            if (source is PlayerMobile && target is PlayerMobile)
-            {
-                PlayerMobile pmFrom = (PlayerMobile)source;
-                PlayerMobile pmTarg = (PlayerMobile)target;
+            var context = EnemyOfOneSpell.GetContext(source);
 
-                if (pmFrom.DuelContext != null && pmFrom.DuelContext.StartedBeginCountdown && !pmFrom.DuelContext.Finished && pmFrom.DuelContext == pmTarg.DuelContext)
-                    return pmFrom.DuelContext.IsAlly(pmFrom, pmTarg) ? Notoriety.Ally : Notoriety.Enemy;
-            }
-            #endregion
+            if (context != null && context.IsEnemy(target))
+                return Notoriety.Enemy;
+            
+            if (Server.Engines.ArenaSystem.PVPArenaSystem.IsEnemy(source, target))
+                return Notoriety.Enemy;
+
+            if (Server.Engines.ArenaSystem.PVPArenaSystem.IsFriendly(source, target))
+                return Notoriety.Ally;
 
             if (target.IsStaff())
                 return Notoriety.CanBeAttacked;
@@ -442,14 +360,11 @@ namespace Server.Misc
                     else
                         return MobileNotoriety(source, master);
                 }
-
-                if (!bc.Summoned && !bc.Controlled && ((PlayerMobile)source).EnemyOfOneType == target.GetType())
-                    return Notoriety.Enemy;
             }
 
-            if (target.Kills >= 5 || (target.Body.IsMonster && IsSummoned(target as BaseCreature) && !(target is BaseFamiliar) && !(target is ArcaneFey) && !(target is Golem)) || (target is BaseCreature && (((BaseCreature)target).AlwaysMurderer || ((BaseCreature)target).IsAnimatedDead)))
+            if (target.Murderer || (target.Body.IsMonster && IsSummoned(target as BaseCreature) && !(target is BaseFamiliar) && !(target is ArcaneFey) && !(target is Golem)) || (target is BaseCreature && (((BaseCreature)target).AlwaysMurderer || ((BaseCreature)target).IsAnimatedDead)))
                 return Notoriety.Murderer;
-				
+
             #region Mondain's Legacy
             if (target is Gregorio)
             {
@@ -457,7 +372,7 @@ namespace Server.Misc
 
                 if (Gregorio.IsMurderer(source))
                     return Notoriety.Murderer;
-				
+
                 return Notoriety.Innocent;
             }
             else if (source.Player && target is Engines.Quests.BaseEscort)
@@ -483,10 +398,16 @@ namespace Server.Misc
                     return Notoriety.Enemy;
             }
 
-            Faction srcFaction = Faction.Find(source, true, true);
-            Faction trgFaction = Faction.Find(target, true, true);
+            if (Factions.Settings.Enabled)
+            {
+                Faction srcFaction = Faction.Find(source, true, true);
+                Faction trgFaction = Faction.Find(target, true, true);
 
-            if (srcFaction != null && trgFaction != null && srcFaction != trgFaction && source.Map == Faction.Facet)
+                if (srcFaction != null && trgFaction != null && srcFaction != trgFaction && source.Map == Faction.Facet)
+                    return Notoriety.Enemy;
+            }
+
+            if (ViceVsVirtueSystem.Enabled && ViceVsVirtueSystem.IsEnemy(source, damageable) && source.Map == Faction.Facet)
                 return Notoriety.Enemy;
 
             if (SkillHandlers.Stealing.ClassicMode && target is PlayerMobile && ((PlayerMobile)target).PermaFlags.Contains(source))
@@ -504,10 +425,10 @@ namespace Server.Misc
                     return Notoriety.CanBeAttacked;
             }
 
-            if (CheckAggressor(source.Aggressors, target))
+            if (CheckAggressor(source.Aggressors, target) || (source is PlayerMobile && CheckPetAggressor((PlayerMobile)source, target)))
                 return Notoriety.CanBeAttacked;
 
-            if (CheckAggressed(source.Aggressed, target))
+            if (CheckAggressed(source.Aggressed, target) || (source is PlayerMobile && CheckPetAggressed((PlayerMobile)source, target)))
                 return Notoriety.CanBeAttacked;
 
             if (target is BaseCreature)
@@ -575,6 +496,28 @@ namespace Server.Misc
                 AggressorInfo info = list[i];
 
                 if (!info.CriminalAggression && info.Defender == target)
+                    return true;
+            }
+
+            return false;
+        }
+
+        public static bool CheckPetAggressor(PlayerMobile source, Mobile target)
+        {
+            foreach (var bc in source.AllFollowers)
+            {
+                if (CheckAggressor(bc.Aggressors, target))
+                    return true;
+            }
+
+            return false;
+        }
+
+        public static bool CheckPetAggressed(PlayerMobile source, Mobile target)
+        {
+            foreach (var bc in source.AllFollowers)
+            {
+                if (CheckAggressed(bc.Aggressed, target))
                     return true;
             }
 

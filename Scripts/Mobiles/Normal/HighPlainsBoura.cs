@@ -13,7 +13,6 @@ namespace Server.Mobiles
         };
 
         private bool GatheredFur { get; set; }
-        private bool m_Stunning;
 
         [Constructable]
         public HighPlainsBoura()
@@ -47,8 +46,6 @@ namespace Server.Mobiles
             ControlSlots = 3;
             MinTameSkill = 47.1;
 
-            QLPoints = 15;
-
             Fame = 5000;
             Karma = 5000; //Lose Karma for killing
 
@@ -70,6 +67,7 @@ namespace Server.Mobiles
         }
 
         public override int DragonBlood { get { return 8; } }
+        public override bool DoesColossalBlow { get { return true; } }
 
         public override HideType HideType
         {
@@ -81,7 +79,7 @@ namespace Server.Mobiles
             get { return FoodType.FruitsAndVegies | FoodType.GrainsAndHay; }
         }
 
-        public void Carve(Mobile from, Item item)
+        public bool Carve(Mobile from, Item item)
         {
             if (!GatheredFur)
             {
@@ -96,10 +94,14 @@ namespace Server.Mobiles
                 {
                     from.SendLocalizedMessage(1112353); // You place the gathered boura fur into your backpack.
                     GatheredFur = true;
+
+                    return true;
                 }
             }
             else
                 from.SendLocalizedMessage(1112354); // The boura glares at you and will not let you shear its fur.
+
+            return false;
         }
 
         public override void OnCarve(Mobile from, Corpse corpse, Item with)
@@ -138,12 +140,13 @@ namespace Server.Mobiles
         {
             base.OnDeath(c);
 
-            c.DropItem(new BouraPelt());
+            if (!Controlled)
             c.DropItem(new BouraSkin());
 
-            if (c != null && !c.Deleted && c is Corpse)
+            if (!Controlled && c != null && !c.Deleted && c is Corpse)
             {
                 var corpse = (Corpse) c;
+
                 if (Utility.RandomDouble() < 0.01 && corpse.Killer != null && !corpse.Killer.Deleted)
                 {
                     GiveVArtifactTo(corpse.Killer);
@@ -161,47 +164,6 @@ namespace Server.Mobiles
                     // For your valor in combating the fallen beast, a special artifact has been bestowed on you.
             else
                 m.SendMessage("As your backpack is full, your reward has been placed at your feet.");
-            {
-            }
-        }
-
-        public override void OnGaveMeleeAttack(Mobile defender)
-        {
-            base.OnGaveMeleeAttack(defender);
-
-            if (!m_Stunning && 0.3 > Utility.RandomDouble())
-            {
-                m_Stunning = true;
-
-                defender.Animate(21, 6, 1, true, false, 0);
-                PlaySound(0xEE);
-                defender.LocalOverheadMessage(MessageType.Regular, 0x3B2, false,
-                    "You have been stunned by a colossal blow!");
-
-                var weapon = Weapon as BaseWeapon;
-                if (weapon != null)
-                    weapon.OnHit(this, defender);
-
-                if (defender.Alive)
-                {
-                    defender.Frozen = true;
-                    Timer.DelayCall(TimeSpan.FromSeconds(5.0), new TimerStateCallback(Recover_Callback), defender);
-                }
-            }
-        }
-
-        private void Recover_Callback(object state)
-        {
-            var defender = state as Mobile;
-
-            if (defender != null)
-            {
-                defender.Frozen = false;
-                defender.Combatant = null;
-                defender.LocalOverheadMessage(MessageType.Regular, 0x3B2, false, "You recover your senses.");
-            }
-
-            m_Stunning = false;
         }
 
         public override void Serialize(GenericWriter writer)

@@ -164,22 +164,22 @@ namespace Server.Spells
 
                 if (Core.SA)
                 {
-                    Register(677, typeof(Mystic.NetherBoltSpell));
-                    Register(678, typeof(Mystic.HealingStoneSpell));
-                    Register(679, typeof(Mystic.PurgeMagicSpell));
-                    Register(680, typeof(Mystic.EnchantSpell));
-                    Register(681, typeof(Mystic.SleepSpell));
-                    Register(682, typeof(Mystic.EagleStrikeSpell));
-                    Register(683, typeof(Mystic.AnimatedWeaponSpell));
-                    Register(684, typeof(Mystic.StoneFormSpell));
-                    Register(685, typeof(Mystic.SpellTriggerSpell));
-                    Register(686, typeof(Mystic.MassSleepSpell));
-                    Register(687, typeof(Mystic.CleansingWindsSpell));
-                    Register(688, typeof(Mystic.BombardSpell));
-                    Register(689, typeof(Mystic.SpellPlagueSpell));
-                    Register(690, typeof(Mystic.HailStormSpell));
-                    Register(691, typeof(Mystic.NetherCycloneSpell));
-                    Register(692, typeof(Mystic.RisingColossusSpell));
+                    Register(677, typeof(Mysticism.NetherBoltSpell));
+                    Register(678, typeof(Mysticism.HealingStoneSpell));
+                    Register(679, typeof(Mysticism.PurgeMagicSpell));
+                    Register(680, typeof(Mysticism.EnchantSpell));
+                    Register(681, typeof(Mysticism.SleepSpell));
+                    Register(682, typeof(Mysticism.EagleStrikeSpell));
+                    Register(683, typeof(Mysticism.AnimatedWeaponSpell));
+                    Register(684, typeof(Mysticism.StoneFormSpell));
+                    Register(685, typeof(Mysticism.SpellTriggerSpell));
+                    Register(686, typeof(Mysticism.MassSleepSpell));
+                    Register(687, typeof(Mysticism.CleansingWindsSpell));
+                    Register(688, typeof(Mysticism.BombardSpell));
+                    Register(689, typeof(Mysticism.SpellPlagueSpell));
+                    Register(690, typeof(Mysticism.HailStormSpell));
+                    Register(691, typeof(Mysticism.NetherCycloneSpell));
+                    Register(692, typeof(Mysticism.RisingColossusSpell));
 
                     Register(700, typeof(SkillMasteries.InspireSpell));
                     Register(701, typeof(SkillMasteries.InvigorateSpell));
@@ -191,7 +191,7 @@ namespace Server.Spells
 
                 if (Core.TOL)
                 {
-                    /*Register(706, typeof(SkillMasteries.DeathRaySpell));
+                    Register(706, typeof(SkillMasteries.DeathRaySpell));
                     Register(707, typeof(SkillMasteries.EtherealBurstSpell));
                     Register(708, typeof(SkillMasteries.NetherBlastSpell));
                     Register(709, typeof(SkillMasteries.MysticWeaponSpell));
@@ -228,7 +228,7 @@ namespace Server.Spells
                     Register(740, typeof(SkillMasteries.FistsOfFurySpell));
                     Register(741, typeof(SkillMasteries.PassiveMasterySpell));
                     Register(742, typeof(SkillMasteries.WhisperingSpell));
-                    Register(743, typeof(SkillMasteries.CombatTrainingSpell));*/
+                    Register(743, typeof(SkillMasteries.CombatTrainingSpell));
                 }
             }
         }

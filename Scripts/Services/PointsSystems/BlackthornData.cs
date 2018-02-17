@@ -12,7 +12,7 @@ namespace Server.Engines.Points
         public override PointsType Loyalty { get { return PointsType.Blackthorn; } }
         public override TextDefinition Name { get { return m_Name; } }
         public override bool AutoAdd { get { return true; } }
-        public override double MaxPoints { get { return int.MaxValue; } }
+        public override double MaxPoints { get { return double.MaxValue; } }
         public override bool ShowOnLoyaltyGump { get { return false; } }
 
         private TextDefinition m_Name = null;
@@ -29,6 +29,9 @@ namespace Server.Engines.Points
 
         public override void ProcessKill(BaseCreature victim, Mobile damager, int index)
         {
+            if (victim.Controlled || victim.Summoned)
+                return;
+        
             Region r = victim.Region;
 
             if (damager is PlayerMobile && r.IsPartOf("BlackthornDungeon"))
@@ -37,7 +40,7 @@ namespace Server.Engines.Points
                     DungeonPoints[damager] = 0;
 
                 int fame = victim.Fame / 2;
-                DungeonPoints[damager] += (int)(fame * (1 + Math.Sqrt(damager.Luck) / 100));
+                DungeonPoints[damager] += (int)(fame * (1 + Math.Sqrt(((PlayerMobile)damager).RealLuck) / 100));
 
                 int x = DungeonPoints[damager];
                 const double A = 0.000863316841;
@@ -86,17 +89,11 @@ namespace Server.Engines.Points
                 writer.Write(kvp.Key);
                 writer.Write(kvp.Value);
             }
-
-            if (!PointsSystem.BlackthornHasSaved)
-                PointsSystem.BlackthornHasSaved = true;
         }
 
         public override void Deserialize(GenericReader reader)
         {
             base.Deserialize(reader);
-
-            if (!PointsSystem.BlackthornHasSaved)
-                return;
 
             int version = reader.ReadInt();
 

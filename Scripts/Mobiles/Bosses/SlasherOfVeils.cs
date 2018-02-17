@@ -57,6 +57,9 @@ namespace Server.Mobiles
             this.SetSkill(SkillName.MagicResist, 110.0, 123.2);
             this.SetSkill(SkillName.Tactics, 112.2, 122.6);
             this.SetSkill(SkillName.Wrestling, 118.9, 128.6);
+
+            Fame = 35000;
+            Karma = -35000;
         }
 
         public SlasherOfVeils(Serial serial)
@@ -78,7 +81,7 @@ namespace Server.Mobiles
                 return new Type[] { typeof(AxesOfFury), typeof(BladeOfBattle), typeof(DemonBridleRing), typeof(PetrifiedSnake), typeof(PillarOfStrength), typeof(SwordOfShatteredHopes), typeof(SummonersKilt), typeof(BreastplateOfTheBerserker) };
             }
         }
-        // public override bool GivesSAArtifact { get { return true; } }
+
         public override bool Unprovokable
         {
             get
@@ -187,12 +190,14 @@ namespace Server.Mobiles
         {
             base.OnMovement(m, oldLocation);
 
-            if (this.m_NextTerror < DateTime.UtcNow && m != null && this.InRange(m.Location, 10) && m.IsPlayer())
+            if (this.m_NextTerror < DateTime.UtcNow && m != null && this.InRange(m.Location, 10) && m.IsPlayer() && m.Alive)
             {
                 m.Frozen = true;
                 m.SendLocalizedMessage(1080342, this.Name, 33); // Terror slices into your very being, destroying any chance of resisting ~1_name~ you might have had
 
                 Timer.DelayCall(TimeSpan.FromSeconds(10), new TimerStateCallback(Terrorize), m);
+
+                BuffInfo.AddBuff(m, new BuffInfo(BuffIcon.TrueFear, 1153791, 1153827, TimeSpan.FromSeconds(10), m));
             }
         }
 
@@ -203,7 +208,9 @@ namespace Server.Mobiles
 
             ArrayList list = new ArrayList();
 
-            foreach (Mobile m in this.GetMobilesInRange(8))
+            IPooledEnumerable eable = GetMobilesInRange(8);
+
+            foreach (Mobile m in eable)
             {
                 if (m == this || !this.CanBeHarmful(m))
                     continue;
@@ -213,6 +220,8 @@ namespace Server.Mobiles
                 else if (m.Player)
                     list.Add(m);
             }
+
+            eable.Free();
 
             foreach (Mobile m in list)
             {

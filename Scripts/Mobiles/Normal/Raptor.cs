@@ -7,10 +7,6 @@ namespace Server.Mobiles
 	[CorpseName("a raptor corpse")]
 	public class Raptor : BaseCreature
 	{
-		public static Type[] VArtifacts =
-        {
-            typeof (RaptorClaw)
-        };
 		private const int MaxFriends = 2;
 
 		private bool m_IsFriend;
@@ -54,7 +50,7 @@ namespace Server.Mobiles
 
 			Fame = 7500;
 			Karma = -7500;
-			QLPoints = 20;
+
 			Tamable = !isFriend;
 			MinTameSkill = 107.1;
 			ControlSlots = 2;
@@ -180,17 +176,12 @@ namespace Server.Mobiles
 		{
 			base.OnDeath(c);
 
-			if (Utility.RandomDouble() < 0.25)
+			if (!Controlled && Utility.RandomDouble() < 0.25)
 			{
 				c.DropItem(new AncientPotteryFragments());
 			}
 
-			if (Utility.RandomDouble() < 0.05)
-			{
-				c.DropItem(new RaptorTeeth());
-			}
-
-			if (c != null && !c.Deleted && c is Corpse)
+			if (!Controlled && c != null && !c.Deleted && c is Corpse)
 			{
 				var corpse = (Corpse)c;
 				if (Utility.RandomDouble() < 0.01 && corpse.Killer != null && !corpse.Killer.Deleted)
@@ -202,7 +193,7 @@ namespace Server.Mobiles
 
 		public static void GiveVArtifactTo(Mobile m)
 		{
-			var item = (Item)Activator.CreateInstance(VArtifacts[Utility.Random(VArtifacts.Length)]);
+            var item = new RaptorClaw();
 			m.PlaySound(0x5B4);
 
 			if (m.AddToBackpack(item))

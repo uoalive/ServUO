@@ -387,6 +387,8 @@ namespace Server.Mobiles
 
 				if (m.Map != Map.Internal || m.Account != null ||
 					(m is IMount && ((IMount)m).Rider != null) ||
+                    (m is GalleonPilot) ||
+                    (GenericBuyInfo.IsDisplayCache(m)) ||
 					(m is BaseCreature && ((BaseCreature)m).IsStabled))
 					return true;
 
@@ -403,6 +405,31 @@ namespace Server.Mobiles
 					if (i.Map != Map.Internal || i.Parent != null || i is Fists || i is MountItem || i is EffectItem || i.HeldBy != null ||
 						i is MovingCrate || i is SpawnPersistence || (i.GetType().DeclaringType == typeof(GenericBuyInfo)))
 						return true;
+
+                    // boat stuffs
+                    if (i is Static && i.Name != null && (i.Name.ToLower() == "weapon pad" || i.Name.ToLower() == "deck"))
+                        return true;
+                    if (i is GalleonHold || i is MooringLine || i is HoldItem || i is BaseDockedBoat || i is Rudder || i is RudderHandle || i is ShipWheel || i is BaseBoat || i is Plank || i is TillerMan || i is Hold || i is BaseCannon)
+                        return true;
+
+                    // Ignores shadowguard addons that are internalized while not in use
+                    if (i is AddonComponent)
+                    {
+                        AddonComponent comp = i as AddonComponent;
+                        BaseAddon addon = ((AddonComponent)comp).Addon;
+
+                        if (addon != null && (addon is ArmoryAddon || addon is BarAddon || addon is BelfryAddon || addon is ShadowguardFountainAddon || addon is OrchardAddon))
+                            return true;
+                    }
+
+                    if (i is BaseAddon && (i is ArmoryAddon || i is BarAddon || i is BelfryAddon || i is ShadowguardFountainAddon || i is OrchardAddon))
+                        return true;
+
+                    if (i is BoatMountItem || i is Server.Factions.FactionPersistence || i is Server.Misc.TreasuresOfTokunoPersistence || i is StealableArtifactsSpawner)
+                        return true;
+
+                    if (i is ArisenController)
+                        return true;
 				}
 
 			return false;
@@ -624,8 +651,10 @@ namespace Server.Mobiles
 								else if (i is Spawner)
 								{
 									// search the entries of the spawner
-									foreach (string so in ((Spawner)i).SpawnNames)
+									foreach (var obj in ((Spawner)i).SpawnObjects)
 									{
+                                        string so = obj.SpawnName;
+
 										if (criteria.Dosearchspawntype)
 										{
 											// search by entry type

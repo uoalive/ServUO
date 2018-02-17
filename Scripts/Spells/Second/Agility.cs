@@ -23,17 +23,7 @@ namespace Server.Spells.Second
                 return SpellCircle.Second;
             }
         }
-        public override bool CheckCast()
-        {
-            if (Engines.ConPVP.DuelContext.CheckSuddenDeath(this.Caster))
-            {
-                this.Caster.SendMessage(0x22, "You cannot cast this spell when in sudden death.");
-                return false;
-            }
-
-            return base.CheckCast();
-        }
-
+        
         public override void OnCast()
         {
             this.Caster.Target = new InternalTarget(this);
@@ -49,7 +39,7 @@ namespace Server.Spells.Second
             {
                 SpellHelper.Turn(this.Caster, m);
 
-				SpellHelper.AddStatBonus(this.Caster, m, StatType.Dex);
+				SpellHelper.AddStatBonus(this.Caster, m, false, StatType.Dex);
 				int percentage = (int)(SpellHelper.GetOffsetScalar(this.Caster, m, false) * 100);
 				TimeSpan length = SpellHelper.GetDuration(this.Caster, m);
 				BuffInfo.AddBuff(m, new BuffInfo(BuffIcon.Agility, 1075841, length, m, percentage.ToString()));

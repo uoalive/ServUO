@@ -1,7 +1,7 @@
 using System;
 using Server.Targeting;
 
-namespace Server.Spells.Mystic
+namespace Server.Spells.Mysticism
 {
 	public class NetherBoltSpell : MysticSpell
 	{
@@ -20,13 +20,15 @@ namespace Server.Spells.Mystic
 		}
 
 		public override bool DelayedDamage{ get{ return true; } }
+        public override bool DelayedDamageStacking { get { return false; } }
+        public override Type[] DelayDamageFamily { get { return new Type[] { typeof(Server.Spells.First.MagicArrowSpell) }; } }
 
 		public override void OnCast()
 		{
 			Caster.Target = new MysticSpellTarget( this, TargetFlags.Harmful );
 		}
 
-		public override void OnTarget( Object o )
+		public override void OnTarget( object o )
 		{
 			Mobile target = o as Mobile;
 
@@ -36,13 +38,14 @@ namespace Server.Spells.Mystic
 			}
 			else if ( CheckHSequence( target ) )
 			{
-				double damage = GetNewAosDamage( 10, 1, 4, target );
-				int hue = 0;
+                SpellHelper.CheckReflect((int)Circle, Caster, ref target);
+
+                double damage = GetNewAosDamage(10, 1, 4, target);
 
                 SpellHelper.Damage(this, target, damage, 0, 0, 0, 0, 0, 100, 0);
 
-				Effects.SendBoltEffect( target, false, hue );
-				Caster.PlaySound( 0x653 );
+                Caster.MovingParticles(target, 0x36D4, 7, 0, false, true, 0x49A, 0, 0, 9502, 4019, 0x160);
+                target.PlaySound(0x211);
 			}
 
 			FinishSequence();

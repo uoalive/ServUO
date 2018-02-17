@@ -34,7 +34,8 @@ namespace Server
 			DataDirectories = new List<string>();
 
 			GlobalMaxUpdateRange = 24;
-			GlobalUpdateRange = 18;
+			GlobalUpdateRange = 24;
+            GlobalRadarRange = 37;
 		}
 
 		private static bool _Crashed;
@@ -87,6 +88,8 @@ namespace Server
 		}
 
 		public static bool Service { get; private set; }
+
+        public static bool NoConsole { get; private set; }
 		public static bool Debug { get; private set; }
 
 		public static bool HaltOnWarning { get; private set; }
@@ -329,7 +332,8 @@ namespace Server
 
 			Closing = true;
 
-			Console.Write("Exiting...");
+            if(Debug)
+                Console.Write("Exiting...");
 
 			World.WaitForWriteCompletion();
 
@@ -340,7 +344,8 @@ namespace Server
 
 			Timer.TimerThread.Set();
 
-			Console.WriteLine("done");
+            if (Debug)
+                Console.WriteLine("done");
 		}
 
 		private static readonly AutoResetEvent _Signal = new AutoResetEvent(true);
@@ -385,7 +390,32 @@ namespace Server
 				{
 					_UseHRT = true;
 				}
-			}
+                else if (Insensitive.Equals(a, "-noconsole"))
+                {
+                    NoConsole = true;
+                }
+                else if (Insensitive.Equals(a, "-h") || Insensitive.Equals(a, "-help"))
+                {
+                    Console.WriteLine("An Ultima Online server emulator written in C# - Visit https://www.servuo.com for more information.\n\n");
+                    Console.WriteLine(System.AppDomain.CurrentDomain.FriendlyName + " [Parameter]\n\n");
+                    Console.WriteLine("     -debug              Starting ServUO in Debug Mode. Debug Mode is being used in Core and Scripts to give extended inforamtion during runtime.");
+                    Console.WriteLine("     -haltonwarning      ServUO halts if any warning is raised during compilation of scripts.");
+                    Console.WriteLine("     -h or -help         Displays this help text.");
+                    Console.WriteLine("     -nocache            No known effect.");
+                    Console.WriteLine("     -noconsole          No user interaction during startup and runtime.");
+                    Console.WriteLine("     -profile            Enables profiling allowing to get performance diagnostic information of packets, timers etc. in AdminGump -> Maintenance. Use with caution. This increases server load.");
+                    Console.WriteLine("     -service            This parameter should be set if you're running ServUO as a Windows Service. No user interaction. *Windows only*");
+                    Console.WriteLine("     -usehrt             Enables High Resolution Timing if requirements are met. Increasing the resolution of the timer. *Windows only*");
+                    Console.WriteLine("     -vb                 Enables compilation of VB.NET Scripts. Without this option VB.NET Scripts are skipped.");
+
+                    System.Environment.Exit(0);
+                }
+            }
+
+            if (!Environment.UserInteractive || Service)
+            {
+                NoConsole = true;
+            }
 
 			try
 			{
@@ -429,30 +459,38 @@ namespace Server
 
 			Version ver = Assembly.GetName().Version;
 
-			String publishNumber = "";
-
-			if (File.Exists("Publish.txt"))
-			{
-				publishNumber = File.ReadAllText("Publish.txt");
-			}
-
 			// Added to help future code support on forums, as a 'check' people can ask for to it see if they recompiled core or not
 			Utility.PushColor(ConsoleColor.DarkGreen);
-			Console.WriteLine(new String('-', Console.BufferWidth));
+            if(!NoConsole)
+            {
+                Console.WriteLine(new String('-', Console.BufferWidth));
+            }
+            else
+            {
+                Console.WriteLine(new String('-', 10));
+            }
 			Utility.PopColor();
 			Utility.PushColor(ConsoleColor.Cyan);
-			Console.WriteLine(
-				"ServUO - [http://www.servuo.com] Version {0}.{1}, Build {2}.{3}",
+        #if DEBUG
+            Console.WriteLine(
+                "ServUO - [https://www.servuo.com] Version {0}.{1}, Build {2}.{3} - Debug",
+                ver.Major,
+                ver.Minor,
+                ver.Build,
+                ver.Revision);
+        #else
+            Console.WriteLine(
+				"ServUO - [https://www.servuo.com] Version {0}.{1}, Build {2}.{3} - Release",
 				ver.Major,
 				ver.Minor,
 				ver.Build,
 				ver.Revision);
-			Console.WriteLine("Publish {0}", publishNumber);
+        #endif
 			Utility.PopColor();
 
 			string s = Arguments;
 
-			if (s.Length > 0)
+            if (s.Length > 0)
 			{
 				Utility.PushColor(ConsoleColor.Yellow);
 				Console.WriteLine("Core: Running with arguments: {0}", s);
@@ -477,7 +515,60 @@ namespace Server
 				Utility.PopColor();
 			}
 
-			int platform = (int)Environment.OSVersion.Platform;
+            string dotnet = null;
+
+            #if NETFX_20
+                        dotnet = "2.0";
+            #endif
+
+            #if NETFX_30
+                        dotnet = "3.0";
+            #endif
+
+            #if NETFX_35
+                        dotnet = "3.5";
+            #endif
+
+            #if NETFX_40
+                        dotnet = "4.0";
+            #endif
+
+            #if NETFX_45
+                        dotnet = "4.5";
+            #endif
+
+            #if NETFX_451
+                        dotnet = "4.5.1";
+            #endif
+
+            #if NETFX_46
+                        dotnet = "4.6.0";
+            #endif
+
+            #if NETFX_461
+                        dotnet = "4.6.1";
+            #endif
+
+            #if NETFX_462
+                        dotnet = "4.6.2";
+            #endif
+
+            #if NETFX_47
+                        dotnet = "4.7";
+            #endif
+
+            #if NETFX_471
+                        dotnet = "4.7.1";
+            #endif
+
+            if (String.IsNullOrEmpty(dotnet))
+                dotnet = "MONO/CSC/Unknown";
+            
+            Utility.PushColor(ConsoleColor.Green);
+            Console.WriteLine("Core: Compiled for .NET {0}", dotnet);
+            Utility.PopColor();
+
+            int platform = (int)Environment.OSVersion.Platform;
 
 			if (platform == 4 || platform == 128)
 			{
@@ -495,7 +586,7 @@ namespace Server
 
 			if (GCSettings.IsServerGC)
 			{
-				Utility.PushColor(ConsoleColor.DarkYellow);
+				Utility.PushColor(ConsoleColor.Green);
 				Console.WriteLine("Core: Server garbage collection mode enabled");
 				Utility.PopColor();
 			}
@@ -513,7 +604,7 @@ namespace Server
 			Console.WriteLine("RandomImpl: {0} ({1})", RandomImpl.Type.Name, RandomImpl.IsHardwareRNG ? "Hardware" : "Software");
 			Utility.PopColor();
 
-			Utility.PushColor(ConsoleColor.DarkYellow);
+			Utility.PushColor(ConsoleColor.Green);
 			Console.WriteLine("Core: Loading config...");
 			Config.Load();
 			Utility.PopColor();
@@ -531,7 +622,7 @@ namespace Server
 
 				Console.WriteLine(" - Press return to exit, or R to try again.");
 
-				if (Console.ReadKey(true).Key != ConsoleKey.R)
+                if (Console.ReadKey(true).Key != ConsoleKey.R)
 				{
 					return;
 				}
@@ -641,12 +732,18 @@ namespace Server
 					Utility.Separate(sb, "-usehrt", " ");
 				}
 
+                if (NoConsole)
+                {
+                    Utility.Separate(sb, "-noconsole", " ");
+                }
+
 				return sb.ToString();
 			}
 		}
 
 		public static int GlobalUpdateRange { get; set; }
 		public static int GlobalMaxUpdateRange { get; set; }
+        public static int GlobalRadarRange { get; set; }
 		
 		private static int m_ItemCount, m_MobileCount, m_CustomsCount;
 

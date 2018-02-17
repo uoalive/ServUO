@@ -18,7 +18,7 @@ namespace Server.Items
             typeof(FoldedSteelGlasses),
             typeof(PoisonedGlasses),
             typeof(TreasureTrinketGlasses),
-            typeof(MaceShieldGlasses),
+            typeof(MaceAndShieldGlasses),
             typeof(ArtsGlasses),
             typeof(AnthropomorphistGlasses)
         };
@@ -191,21 +191,30 @@ namespace Server.Items
             if (i is ITokunoDyable)
                 return true;
 
-            return(
-                   IsInTypeList(t, TreasuresOfTokuno.LesserArtifactsTotal) ||
-                   IsInTypeList(t, TreasuresOfTokuno.GreaterArtifacts) ||
-                #region Mondain's Legacy
-                   IsInTypeList(t, MondainsLegacy.PigmentList) ||
-                #endregion 
-                   IsInTypeList(t, DemonKnight.DoomArtifact) ||
-                   IsInTypeList(t, MondainsLegacy.Artifacts) ||
-                   IsInTypeList(t, StealableArtifactsSpawner.TypesOfEntires) ||
-                   IsInTypeList(t, Paragon.Artifacts) ||
-                   IsInTypeList(t, Leviathan.Artifacts) ||
-                   IsInTypeList(t, TreasureMapChest.Artifacts) ||
-                   IsInTypeList(t, m_Replicas) ||
-                   IsInTypeList(t, m_DyableHeritageItems) ||
-                   IsInTypeList(t, m_Glasses));
+            if (Server.Engines.Blackthorn.BlackthornRewards.IsTokunoDyable(t))
+                return true;
+
+            if (i.IsArtifact)
+                return true;
+
+            return (
+                    IsInTypeList(t, TreasuresOfTokuno.LesserArtifactsTotal) ||
+                    IsInTypeList(t, TreasuresOfTokuno.GreaterArtifacts) ||
+                    #region Mondain's Legacy
+                    IsInTypeList(t, MondainsLegacy.PigmentList) ||
+                    #endregion
+                    #region TOL
+                    IsInTypeList(t, TimeOfLegends.PigmentList) ||
+                    #endregion
+                    IsInTypeList(t, DemonKnight.DoomArtifact) ||
+                    IsInTypeList(t, MondainsLegacy.Artifacts) ||
+                    IsInTypeList(t, StealableArtifactsSpawner.TypesOfEntires) ||
+                    IsInTypeList(t, Paragon.Artifacts) ||
+                    IsInTypeList(t, Leviathan.Artifacts) ||
+                    IsInTypeList(t, TreasureMapChest.Artifacts) ||
+                    IsInTypeList(t, m_Replicas) ||
+                    IsInTypeList(t, m_DyableHeritageItems) ||
+                    IsInTypeList(t, m_Glasses));
         }
 
         private static bool IsInTypeList(Type t, Type[] list)

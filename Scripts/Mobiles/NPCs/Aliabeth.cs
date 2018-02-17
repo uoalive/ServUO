@@ -92,7 +92,7 @@ namespace Server.Engines.Quests
             : base()
         {
             this.AddObjective(new ObtainObjective(typeof(BambooFlute), "Bamboo Flutes", 10, 0x2805));
-            this.AddObjective(new ObtainObjective(typeof(ElvenFletchings), "Elven Fletching", 1, 0x5737));
+            this.AddObjective(new ObtainObjective(typeof(ElvenFletching), "Elven Fletching", 1, 0x5737));
 
             this.AddReward(new BaseReward(typeof(ValuableImbuingBag), 1113769));//Valuable Imbuing Bag
             this.AddReward(new BaseReward("Loyalty Rating")); 
@@ -170,7 +170,7 @@ namespace Server.Engines.Quests
 
         public override void InitSBInfo()
         {
-            this.SBInfos.Add(new SBTinker());
+            this.SBInfos.Add(new SBTinker(this));
         }
 
         [Constructable]

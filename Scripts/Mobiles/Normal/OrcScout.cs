@@ -76,13 +76,16 @@ namespace Server.Mobiles
 			: base(serial)
 		{ }
 
-		public override InhumanSpeech SpeechType { get { return InhumanSpeech.Orc; } }
-		public override OppositionGroup OppositionGroup { get { return OppositionGroup.SavagesAndOrcs; } }
 		public override bool CanHeal { get { return true; } }
 		public override bool CanRummageCorpses { get { return true; } }
+        public override bool CanStealth { get { return true; } }
 		public override int Meat { get { return 1; } }
 
+		public override InhumanSpeech SpeechType { get { return InhumanSpeech.Orc; } }
+		public override OppositionGroup OppositionGroup { get { return OppositionGroup.SavagesAndOrcs; } }
+        public override TribeType Tribe { get { return TribeType.Orc; } }
 		public override void GenerateLoot()
+
 		{
 			AddLoot(LootPack.Rich);
 		}
@@ -134,14 +137,17 @@ namespace Server.Mobiles
 
 		private Mobile FindTarget()
 		{
-			foreach (Mobile m in GetMobilesInRange(10))
+            IPooledEnumerable eable = GetMobilesInRange(10);
+			foreach (Mobile m in eable)
 			{
 				if (m.Player && m.Hidden && m.IsPlayer())
 				{
+                    eable.Free();
 					return m;
 				}
 			}
 
+            eable.Free();
 			return null;
 		}
 

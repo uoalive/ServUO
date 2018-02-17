@@ -6,6 +6,7 @@ using Server.Mobiles;
 using Server.Commands;
 using Server.Accounting;
 using Server.Multis;
+using System.Linq;
 
 namespace Server.Engines.NewMagincia
 {
@@ -146,6 +147,8 @@ namespace Server.Engines.NewMagincia
                 }
             }
 
+            ColUtility.Free(plots);
+
             if (m_Plots.Count == 0)
                 EndTimer();
         }
@@ -164,6 +167,8 @@ namespace Server.Engines.NewMagincia
                         m_MessageQueue[m].Remove(message);
                 }
             }
+
+            ColUtility.Free(mobiles);
         }
 
         public override void Delete()
@@ -253,21 +258,14 @@ namespace Server.Engines.NewMagincia
                 MaginciaHousingPlot tramplot = new MaginciaHousingPlot(m_Identifiers[i], m_MagHousingZones[i], prime, Map.Trammel);
                 MaginciaHousingPlot felplot = new MaginciaHousingPlot(m_Identifiers[i], m_MagHousingZones[i], prime, Map.Felucca);
 
-                bool isBlocked = m_Identifiers[i] == "SW-3" || m_Identifiers[i] == "SW-4";
-
                 RegisterPlot(tramplot);
-
-                if(!isBlocked)
-                    RegisterPlot(felplot);
+                RegisterPlot(felplot);
 
                 tramplot.AddPlotStone(m_StoneLocs[i]);
                 tramplot.LottoEnds = DateTime.UtcNow + m_LottoDuration;
 
-                if (!isBlocked)
-                {
-                    felplot.AddPlotStone(m_StoneLocs[i]);
-                    felplot.LottoEnds = DateTime.UtcNow + m_LottoDuration;
-                }
+                felplot.AddPlotStone(m_StoneLocs[i]);
+                felplot.LottoEnds = DateTime.UtcNow + m_LottoDuration;
             }
         }
 
@@ -514,33 +512,6 @@ namespace Server.Engines.NewMagincia
             }
         }
 
-        /*public static void SendTestMessage_OnCommand(CommandEventArgs e)
-        {
-            NewMaginciaMessage message;
-
-            if (e.Length == 0)
-                message = new NewMaginciaMessage(new TextDefinition(1150484), new TextDefinition(1150483), String.Format("{0}\t{1}\t{2}\t{3}\t{4}", "A-1", e.Mobile.Map.ToString(), "Alexandria", MaginciaLottoSystem.WritExpirePeriod.ToString(), e.Mobile.Location.ToString()));
-            else
-            {
-                int sel = 0;
-                try
-                {
-                    sel = Convert.ToInt32(e.Arguments[0]);
-                }
-                catch { }
-
-                switch (sel)
-                {
-                    default:
-                    case 0: message = new NewMaginciaMessage(new TextDefinition(1150484), new TextDefinition(1150483), String.Format("{0}\t{1}\t{2}\t{3}\t{4}", "A-1", e.Mobile.Map.ToString(), "Alexandria", MaginciaLottoSystem.WritExpirePeriod.ToString(), e.Mobile.Location.ToString())); break;
-                    case 1: message = new NewMaginciaMessage(null, new TextDefinition(1150426), String.Format("{0}\t{1}\t{2}", "A-1", e.Mobile.Map.ToString(), "1500")); break;
-                    case 2: message = new NewMaginciaMessage(null, new TextDefinition(1150427), String.Format("{0}\t{1}\t{2}\t{3}\t{4}", "A-1", e.Mobile.Map.ToString(), "1500", "25000", "23500")); break;
-                    case 3: message = new NewMaginciaMessage(null, new TextDefinition(1150428), String.Format("{0}\t{1}\t{2}", "A-2", e.Mobile.Map.ToString(), "4500")); break;
-                }
-            }
-
-            SendMessageTo(e.Mobile, message);
-        }*/
         #endregion
 
         public MaginciaLottoSystem(Serial serial)
@@ -627,6 +598,42 @@ namespace Server.Engines.NewMagincia
                 StartTimer();
 
             m_Instance = this;
+
+            Timer.DelayCall(ValidatePlots);
+        }
+
+        public void ValidatePlots()
+        {
+            for(int i = 0; i < m_Identifiers.Length; i++)
+            {
+                var rec = m_MagHousingZones[i];
+                var id = m_Identifiers[i];
+
+                var plotTram = m_Plots.FirstOrDefault(p => p.Identifier == id && p.Map == Map.Trammel);
+                var plotFel = m_Plots.FirstOrDefault(p => p.Identifier == id && p.Map == Map.Felucca);
+
+                if (plotTram == null && !m_FreeHousingZones[Map.Trammel].Contains(rec))
+                {
+                    Console.WriteLine("Adding {0} to Magincia Free Housing Zone.[{1}]", rec, "Plot non-existent");
+                    m_FreeHousingZones[Map.Trammel].Add(plotTram.Bounds);
+                }
+                else if (plotTram != null && plotTram.Stone == null && (plotTram.Writ == null || plotTram.Writ.Expired))
+                {
+                    Console.WriteLine("Adding {0} to Magincia Free Housing Zone.[{1}]", rec, "Plot existed, writ expired");
+                    UnregisterPlot(plotTram);
+                }
+
+                if (plotFel == null && !m_FreeHousingZones[Map.Felucca].Contains(rec))
+                {
+                    Console.WriteLine("Adding {0} to Magincia Free Housing Zone.[{1}]", rec, "Plot non-existent");
+                    m_FreeHousingZones[Map.Felucca].Add(rec);
+                }
+                else if (plotFel != null && plotFel.Stone == null && (plotFel.Writ == null || plotFel.Writ.Expired))
+                {
+                    Console.WriteLine("Adding {0} to Magincia Free Housing Zone.[{1}]", rec, "Plot existed, writ expired");
+                    UnregisterPlot(plotFel);
+                }
+            }
         }
     }
 }

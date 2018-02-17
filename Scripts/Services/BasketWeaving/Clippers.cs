@@ -21,16 +21,16 @@ namespace Server.Items
         public Clippers()
             : base(0x0DFC)
         {
-            this.Weight = 1.0;
-            this.Hue = 1168;
+            Weight = 1.0;
+            Hue = 1168;
         }
 
         [Constructable]
         public Clippers(int uses)
             : base(uses, 0x0DFC)
         {
-            this.Weight = 1.0;
-            this.Hue = 1168;
+            Weight = 1.0;
+            Hue = 1168;
         }
 
         public override void GetProperties(ObjectPropertyList list)
@@ -158,24 +158,26 @@ namespace Server.Items
 
         public void ConsumeUse(Mobile from)
         {
-            if (this.UsesRemaining > 1)
+            if (UsesRemaining > 1)
             {
-                --this.UsesRemaining;
+                --UsesRemaining;
             }
             else
             {
                 if (from != null)
                     from.SendLocalizedMessage(1112126); // Your clippers break as you use up the last charge..
 
-                this.Delete();
+                Delete();
             }
         }
 
         public override void OnDoubleClick(Mobile from)
         {
-            from.SendLocalizedMessage(1112118); // What plant do you wish to use these clippers on?
-
-            from.Target = new InternalTarget(this);
+            if (IsChildOf(from.Backpack))
+            {
+                from.SendLocalizedMessage(1112118); // What plant do you wish to use these clippers on?
+                from.Target = new InternalTarget(this);
+            }
         }
 
         private class InternalTarget : Target

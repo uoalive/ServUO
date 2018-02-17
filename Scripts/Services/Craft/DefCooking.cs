@@ -7,7 +7,14 @@ namespace Server.Engines.Craft
     public enum CookRecipes
     {
         // magical
-        RotWormStew = 500
+        RotWormStew = 500,
+        GingerbreadCookie = 599,
+
+        DarkChocolateNutcracker = 600,
+        MilkChocolateNutcracker = 601,
+        WhiteChocolateNutcracker = 602,
+
+        ThreeTieredCake = 603
     }
     #endregion
 
@@ -60,12 +67,14 @@ namespace Server.Engines.Craft
         {
         }
 
-        public override int CanCraft(Mobile from, BaseTool tool, Type itemType)
+        public override int CanCraft(Mobile from, ITool tool, Type itemType)
         {
-            if (tool == null || tool.Deleted || tool.UsesRemaining < 0)
+            int num = 0;
+
+            if (tool == null || tool.Deleted || tool.UsesRemaining <= 0)
                 return 1044038; // You have worn out your tool!
-            else if (!BaseTool.CheckAccessible(tool, from))
-                return 1044263; // The tool must be on your person to use.
+            else if (!tool.CheckAccessible(from, ref num))
+                return num; // The tool must be on your person to use.
 
             return 0;
         }
@@ -235,7 +244,7 @@ namespace Server.Engines.Craft
             #region High Seas
             if (Core.HS)
             {
-                index = AddCraft(typeof(Charcoal), 1044496, 1116303, 0.0, 50.0, typeof(Log), 1044041, 1, 1044351);
+                index = AddCraft(typeof(Charcoal), 1044496, 1116303, 0.0, 50.0, typeof(Board), 1044041, 1, 1044351);
                 SetUseAllRes(index, true);
                 SetNeedHeat(index, true);
                 SetNeededExpansion(index, Expansion.HS);
@@ -302,6 +311,15 @@ namespace Server.Engines.Craft
                 this.SetNeededExpansion(index, Expansion.SE);
                 this.SetNeedOven(index, true);
             }
+
+            index = this.AddCraft(typeof(GingerBreadCookie), 1044497, 1031233, 35.0, 85.0, typeof(CookieMix), 1044474, 1, 1044253);
+            this.AddRes(index, typeof(FreshGinger), 1031235, 1, 1044253);
+            this.AddRecipe(index, (int)CookRecipes.GingerbreadCookie);
+            this.SetNeedOven(index, true);
+
+            index = this.AddCraft(typeof(ThreeTieredCake), 1044497, 1154465, 60.0, 110.0, typeof(CakeMix), 1044471, 3, 1044253);
+            this.AddRecipe(index, (int)CookRecipes.ThreeTieredCake);
+            this.SetNeedOven(index, true);
             /* End Baking */
 
             /* Begin Barbecue */
@@ -328,11 +346,25 @@ namespace Server.Engines.Craft
             index = this.AddCraft(typeof(Ribs), 1044498, 1022546, 0.0, 100.0, typeof(RawRibs), 1044485, 1, 1044253);
             this.SetNeedHeat(index, true);
             this.SetUseAllRes(index, true);
+
+            index = this.AddCraft(typeof(BowlOfRotwormStew), 1044498, 1031706, 0.0, 100.0, typeof(RawRotwormMeat), 1031705, 1, 1044253);
+            this.SetNeedHeat(index, true);
+            this.SetUseAllRes(index, true);
+            this.AddRecipe(index, (int)CookRecipes.RotWormStew);
+            this.SetNeededExpansion(index, Expansion.SA);
             /* End Barbecue */
 
             /* Begin Chocolatiering */
             if (Core.ML)
             {
+                if (Core.TOL)
+                {
+                    index = this.AddCraft(typeof(SweetCocoaButter), 1080001, 1156401, 15.0, 100.0, typeof(SackOfSugar), 1079997, 1, 1044253);
+                    this.AddRes(index, typeof(CocoaButter), 1079998, 1, 1044253);
+                    this.SetItemHue(index, 0x457);
+                    this.SetNeedOven(index, true);
+                }
+
                 index = this.AddCraft(typeof(DarkChocolate), 1080001, 1079994, 15.0, 100.0, typeof(SackOfSugar), 1079997, 1, 1044253);
                 this.AddRes(index, typeof(CocoaButter), 1079998, 1, 1044253);
                 this.AddRes(index, typeof(CocoaLiquor), 1079999, 1, 1044253);
@@ -354,6 +386,32 @@ namespace Server.Engines.Craft
                 this.SetBeverageType(index, BeverageType.Milk);
                 this.SetItemHue(index, 0x47E);
                 this.SetNeededExpansion(index, Expansion.ML);
+
+                #region TOL
+                if (Core.TOL)
+                {
+                    index = AddCraft(typeof(ChocolateNutcracker), 1080001, 1156390, 15.0, 100.0, typeof(SweetCocoaButter), 1156401, 1, 1044253);
+                    AddRes(index, typeof(SweetCocoaButter), 1124032, 1, 1156402);
+                    AddRes(index, typeof(CocoaLiquor), 1079999, 1, 1044253);
+                    AddRecipe(index, (int)CookRecipes.DarkChocolateNutcracker);
+                    SetData(index, ChocolateNutcracker.ChocolateType.Dark);
+                    SetNeededExpansion(index, Expansion.TOL);
+
+                    index = AddCraft(typeof(ChocolateNutcracker), 1080001, 1156391, 32.5, 107.5, typeof(SweetCocoaButter), 1156401, 1, 1044253);
+                    AddRes(index, typeof(SweetCocoaButter), 1124032, 1, 1156402);
+                    AddRes(index, typeof(CocoaLiquor), 1079999, 1, 1044253);
+                    AddRecipe(index, (int)CookRecipes.MilkChocolateNutcracker);
+                    SetData(index, ChocolateNutcracker.ChocolateType.Milk);
+                    SetNeededExpansion(index, Expansion.TOL);
+
+                    index = AddCraft(typeof(ChocolateNutcracker), 1080001, 1156392, 52.5, 127.5, typeof(SweetCocoaButter), 1156401, 1, 1044253);
+                    AddRes(index, typeof(SweetCocoaButter), 1124032, 1, 1156402);
+                    AddRes(index, typeof(CocoaLiquor), 1079999, 1, 1044253);
+                    AddRecipe(index, (int)CookRecipes.WhiteChocolateNutcracker);
+                    SetData(index, ChocolateNutcracker.ChocolateType.White);
+                    SetNeededExpansion(index, Expansion.TOL);
+                }
+                #endregion
             }
             /* End Chocolatiering */
 

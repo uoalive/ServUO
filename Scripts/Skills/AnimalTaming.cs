@@ -110,9 +110,8 @@ namespace Server.SkillHandlers
 		{
 			for (int i = 0; i < bc.Skills.Length; ++i)
 			{
+                bc.Skills[i].Cap = Math.Max(100.0, bc.Skills[i].Base * capScalar);
 				bc.Skills[i].Base *= scalar;
-
-				bc.Skills[i].Cap = Math.Max(100.0, bc.Skills[i].Cap * capScalar);
 
 				if (bc.Skills[i].Base > bc.Skills[i].Cap)
 				{
@@ -128,14 +127,6 @@ namespace Server.SkillHandlers
 			public InternalTarget()
 				: base(Core.AOS ? 3 : 2, false, TargetFlags.None)
 			{ }
-
-			public virtual void ResetPacify(object obj)
-			{
-				if (obj is BaseCreature)
-				{
-					((BaseCreature)obj).BardPacified = true;
-				}
-			}
 
 			protected override void OnTargetFinish(Mobile from)
 			{
@@ -221,16 +212,19 @@ namespace Server.SkillHandlers
 								creature.PlaySound(creature.GetAngerSound());
 								creature.Direction = creature.GetDirectionTo(from);
 
-								if (creature.BardPacified && Utility.RandomDouble() > .24)
-								{
-									Timer.DelayCall(TimeSpan.FromSeconds(2.0), new TimerStateCallback(ResetPacify), creature);
-								}
-								else
-								{
-									creature.BardEndTime = DateTime.UtcNow;
-								}
+                                if (!Core.SA)
+                                {
+                                    if (creature.BardPacified && Utility.RandomDouble() > .24)
+                                    {
+                                        Timer.DelayCall(TimeSpan.FromSeconds(2.0), () => creature.BardPacified = true);
+                                    }
+                                    else
+                                    {
+                                        creature.BardEndTime = DateTime.UtcNow;
+                                    }
 
-								creature.BardPacified = false;
+                                    creature.BardPacified = false;
+                                }
 
 								if (creature.AIObject != null)
 								{

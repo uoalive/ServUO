@@ -1,20 +1,3 @@
-/*                                                             .---.
-/  .  \
-|\_/|   |
-|   |  /|
-.----------------------------------------------------------------' |
-/  .-.                                                              |
-|  /   \         Contribute To The Orbsydia SA Project               |
-| |\_.  |                                                            |
-|\|  | /|                        By Lotar84                          |
-| `---' |                                                            |
-|       |       (Orbanised by Orb SA Core Development Team)          | 
-|       |                                                           /
-|       |----------------------------------------------------------'
-\       |
-\     /
-`---'
-*/
 using System;
 using Server.Items;
 
@@ -26,7 +9,7 @@ namespace Server.Engines.Quests
         public Neville()
             : base()
         {
-            this.Name = "Neville Brightwhistle";
+            Name = "Neville Brightwhistle";
         }
 
         public Neville(Serial serial)
@@ -65,23 +48,25 @@ namespace Server.Engines.Quests
 
         public override void InitBody()
         {
-            this.InitStats(100, 100, 25);
+            InitStats(100, 100, 25);
 
-            this.Female = false;
-            this.Race = Race.Human;
+            Female = false;
+            Race = Race.Human;
 
-            this.Hue = 0x8412;
-            this.HairItemID = 0x2047;
-            this.HairHue = 0x465;
+            Hue = Race.RandomSkinHue();
+            HairItemID = Race.RandomHair(false);
+            HairHue = Race.RandomHairHue();
+
+            Frozen = true;
+            Direction = Direction.North;
         }
 
         public override void InitOutfit()
         {
-            this.AddItem(new Backpack());
-            this.AddItem(new Shoes(0x1BB));
-            this.AddItem(new LongPants(0x901));
-            this.AddItem(new Tunic(0x70A));
-            this.AddItem(new Cloak(0x675));
+            SetWearable(new Backpack());
+            SetWearable(new Shoes(1877));
+            SetWearable(new LongPants(443));
+            SetWearable(new FancyShirt(1425));
         }
 
         public override void Serialize(GenericWriter writer)
@@ -96,6 +81,9 @@ namespace Server.Engines.Quests
             base.Deserialize(reader);
 
             int version = reader.ReadInt();
+
+            Frozen = true;
+            Direction = Direction.North;
         }
     }
 }

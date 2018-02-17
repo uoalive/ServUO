@@ -12,7 +12,7 @@ using Server.Targeting;
 using System.Text.RegularExpressions;
 using Server.Regions;
 
-namespace Server.Engines.VendorSearhing
+namespace Server.Engines.VendorSearching
 {
 	public class VendorSearch
 	{
@@ -331,8 +331,8 @@ namespace Server.Engines.VendorSearhing
                     if (str == "WeaponVelocity" && (!(item is BaseRanged) || ((BaseRanged)item).Velocity < value))
                         return false;
 
-                    if (str == "BalancedWeapon" && (!(item is BaseRanged) || !((BaseRanged)item).Balanced))
-                        return false;
+                    /*if (str == "BalancedWeapon" && (!(item is BaseRanged) || !((BaseRanged)item).Balanced))
+                        return false;*/
 
                     if (str == "SearingWeapon" && (!(item is BaseWeapon) || !((BaseWeapon)item).SearingWeapon))
                         return false;
@@ -372,22 +372,7 @@ namespace Server.Engines.VendorSearhing
         {
             NegativeAttributes neg = RunicReforging.GetNegativeAttributes(item);
 
-            if (neg != null && neg.NoRepair != 0)
-                return false;
-
-            if (item is BaseWeapon && ((BaseWeapon)item).BlockRepair)
-                return false;
-
-            if (item is BaseArmor && ((BaseArmor)item).BlockRepair)
-                return false;
-
-            if (item is BaseJewel && ((BaseJewel)item).BlockRepair)
-                return false;
-
-            if (item is BaseClothing && ((BaseClothing)item).BlockRepair)
-                return false;
-
-            return true;
+            return neg != null && neg.NoRepair != 0;
         }
 
         private static bool CheckKeyword(string searchstring, Item item)
@@ -529,7 +514,7 @@ namespace Server.Engines.VendorSearhing
 
                     combat.Register(new object[] { AosAttribute.WeaponDamage, AosAttribute.DefendChance, AosAttribute.AttackChance, AosAttribute.WeaponSpeed, AosArmorAttribute.SoulCharge, 
                                                        AosWeaponAttribute.UseBestSkill, AosWeaponAttribute.ReactiveParalyze, /*TODO: Assassin Honed*/"SearingWeapon", AosWeaponAttribute.BloodDrinker, AosWeaponAttribute.BattleLust, 
-                                                       "BalancedWeapon", SAAbsorptionAttribute.CastingFocus, SAAbsorptionAttribute.EaterFire, SAAbsorptionAttribute.EaterCold,
+                                                       AosAttribute.BalancedWeapon, SAAbsorptionAttribute.CastingFocus, SAAbsorptionAttribute.EaterFire, SAAbsorptionAttribute.EaterCold,
                                                        SAAbsorptionAttribute.EaterPoison, SAAbsorptionAttribute.EaterEnergy, SAAbsorptionAttribute.EaterDamage });
 
                     casting.Register(new object[] { SAAbsorptionAttribute.ResonanceFire, SAAbsorptionAttribute.ResonanceCold, SAAbsorptionAttribute.ResonancePoison, SAAbsorptionAttribute.ResonanceEnergy,

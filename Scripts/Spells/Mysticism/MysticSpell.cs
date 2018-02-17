@@ -1,11 +1,8 @@
 using System;
 using Server;
-using Server.Items;
-using Server.Mobiles;
-using Server.Spells;
 using Server.Targeting;
 
-namespace Server.Spells.Mystic
+namespace Server.Spells.Mysticism
 {
     public abstract class MysticSpell : Spell
     {
@@ -18,7 +15,7 @@ namespace Server.Spells.Mystic
 
         private static int[] m_ManaTable = new int[] { 4, 6, 9, 11, 14, 20, 40, 50 };
 
-        public override TimeSpan CastDelayBase { get { return TimeSpan.FromSeconds(1.0); } }
+        public override TimeSpan CastDelayBase { get { return TimeSpan.FromSeconds(0.5 + 0.25 * (int)Circle); } }
         public override double CastDelayFastScalar { get { return 1.0; } }
 
         private const double ChanceOffset = 20.0, ChanceLength = 100.0 / 7.0;
@@ -55,8 +52,16 @@ namespace Server.Spells.Mystic
             }
         }
 
+        public override void SendCastEffect()
+        {
+            Caster.FixedEffect(0x37C4, 87, (int)(GetCastDelay().TotalSeconds * 28), 0x66C, 3);
+        }
+
         public override int GetMana()
         {
+            if (Core.TOL && this is HailStormSpell)
+                return 50;
+
             return m_ManaTable[(int)Circle];
         }
 
@@ -65,7 +70,7 @@ namespace Server.Spells.Mystic
             if (Scroll is SpellStone)
                 return TimeSpan.Zero;
 
-            return TimeSpan.FromSeconds(0.75);
+            return base.GetCastRecovery();
         }
 
         public override TimeSpan GetCastDelay()
@@ -73,7 +78,7 @@ namespace Server.Spells.Mystic
             if (Scroll is SpellStone)
                 return TimeSpan.Zero;
 
-            return TimeSpan.FromSeconds(0.5 + (0.25 * (int)Circle));
+            return base.GetCastDelay();
         }
 
         public override bool CheckCast()
@@ -107,8 +112,9 @@ namespace Server.Spells.Mystic
 
         public virtual double GetResistPercentForCircle(Mobile target, SpellCircle circle)
         {
-            double firstPercent = target.Skills[SkillName.MagicResist].Value / 5.0;
-            double secondPercent = target.Skills[SkillName.MagicResist].Value - (((Caster.Skills[CastSkill].Value - 20.0) / 5.0) + (1 + (int)circle) * 5.0);
+            double value = GetResistSkill(target);
+            double firstPercent = value / 5.0;
+            double secondPercent = value - (((Caster.Skills[CastSkill].Value - 20.0) / 5.0) + (1 + (int)circle) * 5.0);
 
             return (firstPercent > secondPercent ? firstPercent : secondPercent) / 2.0; // Seems should be about half of what stratics says.
         }
@@ -116,6 +122,16 @@ namespace Server.Spells.Mystic
         public virtual double GetResistPercent(Mobile target)
         {
             return GetResistPercentForCircle(target, Circle);
+        }
+
+        public static double GetBaseSkill(Mobile m)
+        {
+            return m.Skills[SkillName.Mysticism].Value;
+        }
+
+        public static double GetBoostSkill(Mobile m)
+        {
+            return Math.Max(m.Skills[SkillName.Imbuing].Value, m.Skills[SkillName.Focus].Value);
         }
 
         public virtual void OnTarget(Object o)

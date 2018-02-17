@@ -10,8 +10,8 @@ namespace Server.Mobiles
 		public SentinelSpider() : base( AIType.AI_Melee, FightMode.Closest, 10, 1, 0.2, 0.4 )
 		{
 			Name = "a Sentinel spider";
-			Body = 20;
-            Hue = 2949;
+			Body = 0x9d;
+            Hue = 1141;
 			BaseSoundID = 0x388;
 
 			SetStr( 95, 100 );
@@ -40,12 +40,6 @@ namespace Server.Mobiles
 			Karma = -775;
 
 			VirtualArmor = 28; 
-
-			Tamable = true;
-			ControlSlots = 3;
-			MinTameSkill = 74.7;
-
-			//PackItem( new SpidersSilk( 7 ) );
 		}
 
 		public override void GenerateLoot()
@@ -63,9 +57,6 @@ namespace Server.Mobiles
 			
 			if (Utility.RandomDouble() < 0.03)            
                 c.DropItem(new LuckyCoin());
-           
-            if (Utility.RandomDouble() < 0.15)
-                c.DropItem(new BottleIchor());
         }
 
 		public override FoodType FavoriteFood{ get{ return FoodType.Meat; } }
@@ -83,13 +74,19 @@ namespace Server.Mobiles
 		public override void Serialize( GenericWriter writer )
 		{
 			base.Serialize( writer );
-			writer.Write( (int) 0 );
+			writer.Write( (int) 1 );
 		}
 
 		public override void Deserialize( GenericReader reader )
 		{
 			base.Deserialize( reader );
 			int version = reader.ReadInt();
+
+            if (version == 0)
+            {
+                Body = 0x9d;
+                Hue = 1141;
+            }
 
 			if ( BaseSoundID == 387 )
 				BaseSoundID = 0x388;

@@ -47,6 +47,11 @@ namespace Server.Mobiles
             }
         }
 
+        public override bool GivesMLMinorArtifact
+        {
+            get { return true; }
+        }
+
         public Pyre(Serial serial)
             : base(serial)
         {
@@ -61,13 +66,6 @@ namespace Server.Mobiles
 
         }
 
-        public override bool GivesMLMinorArtifact
-        {
-            get
-            {
-                return true;
-            }
-        }
         public override int TreasureMapLevel
         {
             get
@@ -75,13 +73,15 @@ namespace Server.Mobiles
                 return 5;
             }
         }
-        public override bool HasAura
+
+        public override bool HasAura { get { return false; } }
+        public override int AuraRange { get { return 2; } }
+
+        public override void AuraEffect(Mobile m)
         {
-            get
-            {
-                return true;
-            }
+            m.SendMessage("The radiating heat scorches your skin!");
         }
+
         public override void GenerateLoot()
         {
             this.AddLoot(LootPack.UltraRich, 3);

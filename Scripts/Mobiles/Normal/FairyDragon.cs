@@ -17,7 +17,7 @@ namespace Server.Mobiles
 
         [Constructable]
         public FairyDragon()
-            : base(AIType.AI_Mage, FightMode.Evil, 10, 1, 0.2, 0.4)
+            : base(AIType.AI_Mystic, FightMode.Closest, 10, 1, 0.2, 0.4)
         {
             Name = "Fairy Dragon";
             Body = 718;
@@ -49,10 +49,9 @@ namespace Server.Mobiles
             SetSkill(SkillName.Wrestling, 90.1, 92.5);
 
             Fame = 15000;
-            Karma = 15000;
+            Karma = -15000;
 
             VirtualArmor = 39;
-            QLPoints = 2;
         }
 
         public FairyDragon(Serial serial)
@@ -69,27 +68,10 @@ namespace Server.Mobiles
         {
 
             base.OnDeath(c);
-            Region reg = Region.Find(c.GetWorldLocation(), c.Map);
-            if (0.25 > Utility.RandomDouble() && reg.Name == "Fairy Dragon Lair")
-            {
-                switch (Utility.Random(2))
-                {
-                    case 0: c.DropItem(new EssenceDiligence()); break;
-                    case 1: c.DropItem(new FaeryDust()); break;
-                }
-            }
+
             if (Utility.RandomDouble() <= 0.25)
             {
-                switch (Utility.Random(2))
-                {
-                    case 0:
-                        c.DropItem(new FeyWings());
-                        break;
-                    case 1:
-                        c.DropItem(new FairyDragonWing());
-                        break;
-
-                }
+                c.DropItem(new FairyDragonWing());
             }
 
             if (Utility.RandomDouble() < 0.10)

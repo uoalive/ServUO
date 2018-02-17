@@ -5,6 +5,7 @@ using Server.Mobiles;
 using Server.Spells;
 using Server.Spells.Necromancy;
 using Server.Spells.Ninjitsu;
+using Server.Spells.SkillMasteries;
 
 namespace Server.Misc
 {
@@ -63,12 +64,12 @@ namespace Server.Misc
             m.CheckSkill(skill, n);
         }
 
-        private static bool CheckTransform(Mobile m, Type type)
+        public static bool CheckTransform(Mobile m, Type type)
         {
             return TransformationSpellHelper.UnderTransformation(m, type);
         }
 
-        private static bool CheckAnimal(Mobile m, Type type)
+        public static bool CheckAnimal(Mobile m, Type type)
         {
             return AnimalForm.UnderTransformation(m, type);
         }
@@ -77,11 +78,8 @@ namespace Server.Misc
         {
             int points = AosAttributes.GetValue(from, AosAttribute.RegenHits);
 
-            if (from is BaseCreature && !((BaseCreature)from).IsAnimatedDead)
-                points += 4;
-
-            if ((from is BaseCreature && ((BaseCreature)from).IsParagon) || from is Leviathan)
-                points += 40;
+            if (from is BaseCreature)
+                points += ((BaseCreature)from).DefaultHitsRegen;
 
             if (Core.ML && from.Race == Race.Human)	//Is this affected by the cap?
                 points += 2;
@@ -95,24 +93,13 @@ namespace Server.Misc
             if (CheckTransform(from, typeof(HorrificBeastSpell)))
                 points += 20;
 
-            if (from is BaseCreature && ((BaseCreature)from).HumilityBuff > 0)
-            {
-                switch (((BaseCreature)@from).HumilityBuff)
-                {
-                    case 1:
-                        points += 10;
-                        break;
-                    case 2:
-                        points += 20;
-                        break;
-                    case 3:
-                        points += 30;
-                        break;
-                }
-            }
-
             if (CheckAnimal(from, typeof(Dog)) || CheckAnimal(from, typeof(Cat)))
                 points += from.Skills[SkillName.Ninjitsu].Fixed / 30;
+
+            // Skill Masteries
+            points += RampageSpell.GetBonus(from, RampageSpell.BonusType.HitPointRegen);
+            points += CombatTrainingSpell.RegenBonus(from);
+            points += BarrabHemolymphConcentrate.HPRegenBonus(from);
 
             if (Core.AOS)
                 foreach (RegenBonusHandler handler in HitsBonusHandlers)
@@ -130,10 +117,10 @@ namespace Server.Misc
 
             int points = (int)(from.Skills[SkillName.Focus].Value * 0.1);
 
-            if ((from is BaseCreature && ((BaseCreature)from).IsParagon) || from is Leviathan)
-                points += 40;
-
             int cappedPoints = AosAttributes.GetValue(from, AosAttribute.RegenStam);
+
+            if (from is BaseCreature)
+                points += ((BaseCreature)from).DefaultStamRegen;
 
             if (CheckTransform(from, typeof(VampiricEmbraceSpell)))
                 cappedPoints += 15;
@@ -145,6 +132,9 @@ namespace Server.Misc
                 cappedPoints = Math.Min(cappedPoints, 24);
 
             points += cappedPoints;
+
+            // Skill Masteries
+            points += RampageSpell.GetBonus(from, RampageSpell.BonusType.StamRegen); // After the cap???
 
             if (points < -1)
                 points = -1;
@@ -182,10 +172,10 @@ namespace Server.Misc
 
                 double totalPoints = focusPoints + medPoints + (from.Meditating ? (medPoints > 13.0 ? 13.0 : medPoints) : 0.0);
 
-                if ((from is BaseCreature && ((BaseCreature)from).IsParagon) || from is Leviathan)
-                    totalPoints += 40;
-
                 int cappedPoints = AosAttributes.GetValue(from, AosAttribute.RegenMana);
+
+                if (from is BaseCreature)
+                    totalPoints += ((BaseCreature)from).DefaultManaRegen;
 
                 if (CheckTransform(from, typeof(VampiricEmbraceSpell)))
                     cappedPoints += 3;

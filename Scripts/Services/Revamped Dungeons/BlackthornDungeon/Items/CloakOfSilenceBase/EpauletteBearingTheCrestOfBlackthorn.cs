@@ -15,11 +15,10 @@ namespace Server.Items
             ReforgedSuffix = ReforgedSuffix.Blackthorn;
             ItemID = 0x9985;
             SkillBonuses.SetValues(0, SkillName.Stealth, 10.0);
-            Hue = 2130;            
-        }
+            Hue = 2130;
 
-        public override int InitMinHits { get { return 255; } }
-        public override int InitMaxHits { get { return 255; } }       
+			Layer = Layer.OuterTorso;
+        }     
 
         public EpauletteBearingTheCrestOfBlackthorn3(Serial serial)
             : base(serial)
@@ -29,13 +28,29 @@ namespace Server.Items
         public override void Serialize(GenericWriter writer)
         {
             base.Serialize(writer);
-            writer.Write(0);
+            writer.Write(1);
         }
 
         public override void Deserialize(GenericReader reader)
         {
             base.Deserialize(reader);
             int version = reader.ReadInt();
+			
+			if (version == 0)
+            {
+                MaxHitPoints = 0;
+                HitPoints = 0;
+
+                if (Layer != Layer.OuterTorso)
+                {
+                    if (Parent is Mobile)
+                    {
+                        ((Mobile)Parent).AddToBackpack(this);
+                    }
+
+                    Layer = Layer.OuterTorso;
+                }
+            }
         }
     }
 }

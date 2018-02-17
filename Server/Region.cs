@@ -106,7 +106,22 @@ namespace Server
 		StygianAbyss,
 		StygianDragon,
 		Void,
-		CodexShrine
+		CodexShrine,
+		AnvilStrikeInMinoc,
+		ASkaranLullaby,
+		BlackthornsMarch,
+		DupresNightInTrinsic,
+		FayaxionAndTheSix,
+		FlightOfTheNexus,
+		GalehavenJaunt,
+		JhelomToArms,
+		MidnightInYew,
+		MoonglowSonata,
+		NewMaginciaMarch,
+		NujelmWaltz,
+		SherrysSong,
+		StarlightInBritain,
+		TheVesperMist
 	}
 
 	public class Region : IComparable
@@ -421,6 +436,11 @@ namespace Server
 			return (GetRegion(regionType) != null);
 		}
 
+		public bool IsPartOf<T>() where T : Region
+		{
+			return IsPartOf(typeof(T));
+		}
+
 		public bool IsPartOf(string regionName)
 		{
 			return (GetRegion(regionName) != null);
@@ -691,6 +711,22 @@ namespace Server
 			return true;
 		}
 
+	    public virtual bool AllowAutoClaim(Mobile from)
+	    {
+	        if (m_Parent != null)
+	            return m_Parent.AllowAutoClaim( from );
+
+	        return true;
+	    }
+
+	    public virtual bool AllowFlying(Mobile from)
+	    {
+	        if (m_Parent != null)
+	            return m_Parent.AllowFlying(from);
+
+	        return true;
+	    }
+
 		public virtual bool AllowHousing(Mobile from, Point3D p)
 		{
 			if (m_Parent != null)
@@ -901,6 +937,10 @@ namespace Server
 			return true;
 		}
 
+        public virtual void GetContextMenuEntries(Mobile from, List<Server.ContextMenus.ContextMenuEntry> list, Item item)
+        {
+        }
+
 		public virtual bool AllowSpawn()
 		{
 			if (m_Parent != null)
@@ -987,7 +1027,7 @@ namespace Server
 				if (newRChild >= oldRChild)
 				{
 					newR.OnEnter(m);
-					EventSink.InvokeOnEnterRegion(new OnEnterRegionEventArgs(m, newR));
+					EventSink.InvokeOnEnterRegion(new OnEnterRegionEventArgs(m, oldRegion, newR));
 					newR = newR.Parent;
 				}
 			}

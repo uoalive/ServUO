@@ -13,7 +13,7 @@ namespace Server.Engines.Points
         public override PointsType Loyalty { get { return PointsType.CleanUpBritannia; } }
         public override TextDefinition Name { get { return m_Name; } }
         public override bool AutoAdd { get { return true; } }
-        public override double MaxPoints { get { return int.MaxValue; } }
+        public override double MaxPoints { get { return double.MaxValue; } }
         public override bool ShowOnLoyaltyGump { get { return false; } }
 
         private TextDefinition m_Name = null;
@@ -25,10 +25,10 @@ namespace Server.Engines.Points
 
         public static double GetPoints(Item item)
         {
-            if (item.LootType == LootType.Blessed)
-                return 0;
-
             double points = 0;
+
+            if (item is IVvVItem && ((IVvVItem)item).IsVvVItem)
+                return points;
 
             Type type = item.GetType();
 
@@ -132,6 +132,11 @@ namespace Server.Engines.Points
                 {
                     BasePigmentsOfTokuno pigments = (BasePigmentsOfTokuno)item;
                     points = 500 * pigments.UsesRemaining;
+                }
+
+                if (item.LootType != LootType.Blessed && points < 100 && item is IShipwreckedItem && ((IShipwreckedItem)item).IsShipwreckedItem)
+                {
+                    points = 100;
                 }
 
                 return points;
@@ -639,7 +644,7 @@ namespace Server.Engines.Points
             Entries[typeof(BagOfSending)] = 250.0;
             Entries[typeof(Cauldron)] = 200.0;
             Entries[typeof(ChampionSkull)] = 1000.0;
-            Entries[typeof(ChaosShield)] = 2500.0;
+            //Entries[typeof(ChaosShield)] = 2500.0;
             Entries[typeof(ClockworkAssembly)] = 50.0;
             Entries[typeof(ConjurersTrinket)] = 10000.0;
 
@@ -657,13 +662,12 @@ namespace Server.Engines.Points
             Entries[typeof(GrobusFur)] = 20.0;
             Entries[typeof(HorseShoes)] = 200.0;
 
-            Entries[typeof(JackalsCollar)] = 5500.0;
             Entries[typeof(JocklesQuicksword)] = 2.0;
             Entries[typeof(MangledHeadOfDreadhorn)] = 1000.0;
             Entries[typeof(MedusaBlood)] = 1000.0;
             Entries[typeof(MedusaDarkScales)] = 200.0;
             Entries[typeof(MedusaLightScales)] = 200.0;
-            Entries[typeof(MiniHouseDeed)] = 6500.0;
+            Entries[typeof(ContestMiniHouseDeed)] = 6500.0;
             Entries[typeof(Moonstone)] = 5000.0;
             Entries[typeof(MysticsGuard)] = 2500.0;
             Entries[typeof(PowerCrystal)] = 100.0;
@@ -681,7 +685,7 @@ namespace Server.Engines.Points
             Entries[typeof(UntranslatedAncientTome)] = 200.0;
             Entries[typeof(WallBlood)] = 5000.0;
             Entries[typeof(Whip)] = 200.0;
-            //Entries[typeof(BalmOfSwiftness)] = 100.0;
+            Entries[typeof(BalmOfSwiftness)] = 100.0;
             Entries[typeof(TaintedMushroom)] = 1000.0;
             Entries[typeof(GoldenSkull)] = 1000.0;
 
@@ -713,9 +717,9 @@ namespace Server.Engines.Points
                 if (points == 0)
                     m_Mobile.SendLocalizedMessage(1151271); // This item has no turn-in value for Clean Up Britannia.
                 else if (points < 1)
-                    m_Mobile.SendLocalizedMessage(1151272, points.ToString()); // This item is worth less than one point for Clean Up Britannia.
+                    m_Mobile.SendLocalizedMessage(1151272); // This item is worth less than one point for Clean Up Britannia.
                 else if (points == 1)
-                    m_Mobile.SendLocalizedMessage(1151273, points.ToString()); // This item is worth approximately one point for Clean Up Britannia.
+                    m_Mobile.SendLocalizedMessage(1151273); // This item is worth approximately one point for Clean Up Britannia.
                 else
                     m_Mobile.SendLocalizedMessage(1151274, points.ToString()); //This item is worth approximately ~1_VALUE~ points for Clean Up Britannia.
 

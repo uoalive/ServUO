@@ -26,7 +26,7 @@ namespace Server.Items
             Movable = false;
             m_MinDamage = minDamage;
             m_MaxDamage = maxDamage;
-            m_Created = DateTime.Now;
+            m_Created = DateTime.UtcNow;
             m_Duration = duration;
             m_Timer = Timer.DelayCall(TimeSpan.Zero, TimeSpan.FromSeconds(1), OnTick);
         }
@@ -48,7 +48,7 @@ namespace Server.Items
 
         private void OnTick()
         {
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
             var age = now - m_Created;
 
             if (age > m_Duration)
@@ -64,8 +64,9 @@ namespace Server.Items
                 }
 
                 var toDamage = new List<Mobile>();
+                IPooledEnumerable eable = GetMobilesInRange(0);
 
-                foreach (var m in GetMobilesInRange(0))
+                foreach (Mobile m in eable)
                 {
                     var bc = m as BaseCreature;
                     if (m.Alive && !m.IsDeadBondedPet && (bc == null || bc.Controlled || bc.Summoned))
@@ -73,6 +74,7 @@ namespace Server.Items
                         toDamage.Add(m);
                     }
                 }
+                eable.Free();
 
                 for (var i = 0; i < toDamage.Count; i++)
                     Damage(toDamage[i]);

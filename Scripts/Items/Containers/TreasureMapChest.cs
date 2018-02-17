@@ -20,8 +20,8 @@ namespace Server.Items
             typeof(LunaLance), typeof(NightsKiss), typeof(NoxRangersHeavyCrossbow),
             typeof(PolarBearMask), typeof(VioletCourage), typeof(HeartOfTheLion),
             typeof(ColdBlood), typeof(AlchemistsBauble), typeof(CaptainQuacklebushsCutlass),
-			typeof(ForgedPardon), typeof(ShieldOfInvulnerability), typeof(AncientShipModelOfTheHMSCape),
-			typeof(AdmiralHeartyRum)
+			typeof(ShieldOfInvulnerability), typeof(AncientShipModelOfTheHMSCape),
+			typeof(AdmiralsHeartyRum)
         };
 
         public static Type[] ArtifactsLevelFiveToSeven { get { return m_LevelFiveToSeven; } }
@@ -92,7 +92,7 @@ namespace Server.Items
 
             if (owner != null)
             {
-                luck = owner.Luck;
+                luck = owner is PlayerMobile ? ((PlayerMobile)owner).RealLuck : owner.Luck;
                 map = owner.Map;
             }
 
@@ -415,16 +415,16 @@ namespace Server.Items
                 {
                     if (0.025 > Utility.RandomDouble())
                         special = Loot.Construct(m_LevelFiveToSeven);
-                    else if (0.10 > Utility.RandomDouble())
+                    else if (0.20 > Utility.RandomDouble())
                         special = GetRandomSpecial(level, cont.Map);
 
                     arty = Loot.Construct(m_Artifacts);
                 }
                 else if (level >= 5)
                 {
-                    if (0.05 > Utility.RandomDouble())
+                    if (0.005 > Utility.RandomDouble())
                         special = Loot.Construct(m_LevelFiveToSeven);
-                    else if (0.25 > Utility.RandomDouble())
+                    else if (0.15 > Utility.RandomDouble())
                         special = GetRandomSpecial(level, cont.Map);
                 }
                 else if (.10 > Utility.RandomDouble())
@@ -482,24 +482,25 @@ namespace Server.Items
 
             if (rnd <= 1)
             {
-                min = 500; max = 800;
+                min = 500; max = 1300;
             }
             else if (rnd < 5)
             {
-                min = 400; max = 700;
+                min = 400; max = 1100;
             }
             else if (rnd < 25)
             {
-                min = 350; max = 600;
+                min = 350; max = 900;
             }
             else if (rnd < 50)
             {
-                min = 250; max = 500;
+                min = 250; max = 800;
             }
             else
             {
-                min = 100; max = 400;
+                min = 100; max = 600;
             }
+
 			min = (int)(min * scale);
 			max = (int)(max * scale);
         }

@@ -29,7 +29,7 @@ namespace Server.Commands
 		}
 
 		[Usage("DocGen")]
-		[Description("Generates RunUO documentation.")]
+		[Description("Generates ServUO documentation.")]
 		private static void DocGen_OnCommand(CommandEventArgs e)
 		{
 			World.Broadcast(0x35, true, "Documentation is being generated, please wait.");
@@ -475,7 +475,10 @@ namespace Server.Commands
 			DocumentKeywords();
 			DocumentBodies();
 
-			DocumentBulkOrders();
+            if (!BulkOrderSystem.NewSystemEnabled)
+            {
+                DocumentBulkOrders();
+            }
 
 			m_Types = new Dictionary<Type, TypeInfo>();
 			m_Namespaces = new Dictionary<string, List<TypeInfo>>();

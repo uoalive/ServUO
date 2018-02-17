@@ -111,8 +111,10 @@ namespace Server
             if (honorTarget.ReceivedHonorContext != null)
             {
                 if (honorTarget.ReceivedHonorContext.Source == source)
+                {
+                    source.SendLocalizedMessage(1115882); // You don't need to declare again. You are already under Honorable Combat with this target.
                     return;
-
+                }
                 if (honorTarget.ReceivedHonorContext.CheckDistance())
                 {
                     source.SendLocalizedMessage(1063233); // Somebody else is honoring this opponent
@@ -156,11 +158,13 @@ namespace Server
             new HonorContext(source, target);
 
             source.Direction = source.GetDirectionTo(target);
+            source.SendLocalizedMessage(1115884); // You Started Honorable Combat!
 
             if (!source.Mounted)
                 source.Animate(32, 5, 1, true, true, 0);
 
-            BuffInfo.AddBuff(source, new BuffInfo(BuffIcon.Honored, 1075649, BuffInfo.Blank, String.Format("You are honoring {0}", target.Name)));
+            BuffInfo.AddBuff(source, new BuffInfo(BuffIcon.Honored, 1075649, 1153815, String.Format("{0}", target.Name)));
+            BuffInfo.AddBuff(source, new BuffInfo(BuffIcon.Perfection, 1153786, 1151394, String.Format("0\t{0}", target.Name)));
         }
 
         private class InternalTarget : Target
@@ -319,21 +323,26 @@ namespace Server
                 return;
 
             int bushido = (int)from.Skills.Bushido.Value;
+
             if (bushido < 50)
                 return;
 
-            this.m_Perfection += bushido / 10;
+            int damagebonus = bushido / 10;
+
+            this.m_Perfection += damagebonus;
 
             if (this.m_Perfection >= 100)
             {
                 this.m_Perfection = 100;
                 this.m_Source.SendLocalizedMessage(1063254); // You have Achieved Perfection in inflicting damage to this opponent!
-
-                BuffInfo.AddBuff(from, new BuffInfo(BuffIcon.Perfection, 1075651, BuffInfo.Blank, String.Format("+100% Damage to {0}", m_Target.Name)));
+                
+                BuffInfo.AddBuff(m_Target, new BuffInfo(BuffIcon.AchievePerfection, 1075651, 1075652, TimeSpan.FromSeconds(5), from, String.Format("{0}\t{1}", m_Perfection, from.Name)));
             }
             else
             {
                 this.m_Source.SendLocalizedMessage(1063255); // You gain in Perfection as you precisely strike your opponent.
+
+                BuffInfo.AddBuff(from, new BuffInfo(BuffIcon.Perfection, 1153786, 1151394, String.Format("{0}\t{1}", m_Target.Name, m_Perfection)));
             }
         }
 

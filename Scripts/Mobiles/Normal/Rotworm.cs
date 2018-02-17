@@ -1,230 +1,182 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using Server;
-using Server.Network;
+using System;
+using System.Collections.Generic;
 using Server.Items;
 using Server.Engines.Quests;
-//using Server.Engines.Loyalty;
 
 namespace Server.Mobiles
 {
-	[CorpseName( "a rotworm corpse" )]
-	[TypeAlias( "Server.Mobiles.RotWorm" )]
-	public class Rotworm : BaseCreature
-	{
-		[Constructable]
-		public Rotworm()
-			: base( AIType.AI_Melee, FightMode.Closest, 10, 1, 0.25, 0.5 )
-		{
-			Name = "a rotworm";
-			Body = 732;
+    [CorpseName("a rotworm corpse")]
+    [TypeAlias("Server.Mobiles.RotWorm")]
+    public class Rotworm : BaseCreature
+    {
+        [Constructable]
+        public Rotworm()
+            : base(AIType.AI_Melee, FightMode.Closest, 10, 1, 0.25, 0.5)
+        {
+            Name = "a rotworm";
+            Body = 732;
 
-			SetStr( 200, 300 );
-			SetDex( 80 );
-			SetInt( 15, 20 );
+            SetStr(200, 300);
+            SetDex(80);
+            SetInt(15, 20);
 
-			SetHits( 200, 250 );
-			SetStam( 50 );
+            SetHits(200, 250);
+            SetStam(50);
 
-			SetDamage( 1, 5 );
+            SetDamage(1, 5);
 
-			SetDamageType( ResistanceType.Physical, 100 );
+            SetDamageType(ResistanceType.Physical, 100);
 
-			SetResistance( ResistanceType.Physical, 35, 45 );
-			SetResistance( ResistanceType.Fire, 30, 40 );
-			SetResistance( ResistanceType.Cold, 25, 35 );
-			SetResistance( ResistanceType.Poison, 65, 75 );
-			SetResistance( ResistanceType.Energy, 25, 35 );
+            SetResistance(ResistanceType.Physical, 35, 45);
+            SetResistance(ResistanceType.Fire, 30, 40);
+            SetResistance(ResistanceType.Cold, 25, 35);
+            SetResistance(ResistanceType.Poison, 65, 75);
+            SetResistance(ResistanceType.Energy, 25, 35);
 
-			SetSkill( SkillName.MagicResist, 25.0 );
-			SetSkill( SkillName.Tactics, 25.0 );
-			SetSkill( SkillName.Wrestling, 50.0 );
+            SetSkill(SkillName.MagicResist, 25.0);
+            SetSkill(SkillName.Tactics, 25.0);
+            SetSkill(SkillName.Wrestling, 50.0);
 
-			Fame = 500;
-			Karma = -500;
+            Fame = 500;
+            Karma = -500;
 
-            QLPoints = 10;
+            PackBodyPartOrBones();
+        }
 
-			switch ( Utility.Random( 10 ) )
-			{
-				case 0: PackItem( new LeftArm() ); break;
-				case 1: PackItem( new RightArm() ); break;
-				case 2: PackItem( new Torso() ); break;
-				case 3: PackItem( new Bone() ); break;
-				case 4: PackItem( new RibCage() ); break;
-				case 5: PackItem( new RibCage() ); break;
-				case 6: PackItem( new BonePile() ); break;
-			}
-		}
+        public Rotworm(Serial serial)
+            : base(serial)
+        {
+        }
 
-		public Rotworm( Serial serial )
-			: base( serial )
-		{
-		}
+        public override int GetAngerSound() { return 0x62D; }
+        public override int GetIdleSound() { return 0x62D; }
+        public override int GetAttackSound() { return 0x62A; }
+        public override int GetHurtSound() { return 0x62C; }
+        public override int GetDeathSound() { return 0x62B; }
 
-		public override int GetAngerSound() { return 0x62D; }
-		public override int GetIdleSound() { return 0x62D; }
-		public override int GetAttackSound() { return 0x62A; }
-		public override int GetHurtSound() { return 0x62C; }
-		public override int GetDeathSound() { return 0x62B; }
+        public override int Meat { get { return 2; } }
+        public override MeatType MeatType { get { return MeatType.Rotworm; } }
+        public override FoodType FavoriteFood { get { return FoodType.Fish; } }
 
-		//public override LoyaltyGroup LoyaltyGroupEnemy { get { return LoyaltyGroup.GargoyleQueen; } }
-		//public override int LoyaltyPointsAward { get { return 10; } }
+        public override void GenerateLoot()
+        {
+            AddLoot(LootPack.Meager);
+        }
 
-		public override int Meat { get { return 2; } }
-		//public override MeatType MeatType { get { return MeatType.Rotworm; } }
+        public override void OnKilledBy(Mobile mob)
+        {
+            base.OnKilledBy(mob);
 
-		public override void GenerateLoot()
-		{
-			AddLoot( LootPack.Meager );
-		}
+            if (mob is PlayerMobile && 0.2 > Utility.RandomDouble())
+            {
+                PlayerMobile pm = mob as PlayerMobile;
 
-		public override void OnKilledBy( Mobile mob )
-		{
-			base.OnKilledBy( mob );
+                if (QuestHelper.HasQuest<Missing>(pm))
+                {
+                    // As the rotworm dies, you find and pickup a scroll case. Inside the scroll case is parchment. The scroll case crumbles to dust.
+                    pm.SendLocalizedMessage(1095146);
 
-			if ( mob is PlayerMobile && 0.2 > Utility.RandomDouble() )
-			{
-				PlayerMobile pm = mob as PlayerMobile;
+                    pm.AddToBackpack(new ArielHavenWritofMembership());
+                }
+            }
+        }
 
-				if ( QuestHelper.HasQuest<Missing>( pm ) )
-				{
-					// As the rotworm dies, you find and pickup a scroll case. Inside the scroll case is parchment. The scroll case crumbles to dust.
-					pm.SendLocalizedMessage( 1095146 );
+        public override void OnMovement(Mobile m, Point3D oldLocation)
+        {
+            CandlewoodTorch torch = m.FindItemOnLayer(Layer.TwoHanded) as CandlewoodTorch;
 
-					pm.AddToBackpack( new ArielHavenWritofMembership() );
-				}
-			}
-		}
+            if (torch != null && torch.Burning)
+                BeginFlee(TimeSpan.FromSeconds(5.0));
+        }
 
-		public override void OnMovement( Mobile m, Point3D oldLocation )
-		{
-			CandlewoodTorch torch = m.FindItemOnLayer( Layer.TwoHanded ) as CandlewoodTorch;
+        private static Dictionary<Mobile, BloodDiseaseTimer> m_BloodDiseaseTable = new Dictionary<Mobile, BloodDiseaseTimer>();
 
-			if ( torch != null && torch.Burning )
-				BeginFlee( TimeSpan.FromSeconds( 5.0 ) );
-		}
+        public static bool IsDiseased(Mobile m)
+        {
+            return m_BloodDiseaseTable.ContainsKey(m);
+        }
 
-		private static Dictionary<Mobile, BloodDiseaseTimer> m_BloodDiseaseTable = new Dictionary<Mobile, BloodDiseaseTimer>();
+        public override void OnGotMeleeAttack(Mobile attacker)
+        {
+            base.OnGotMeleeAttack(attacker);
 
-		public static bool IsDiseased( Mobile m )
-		{
-			return m_BloodDiseaseTable.ContainsKey( m );
-		}
+            TryInfect(attacker);
+        }
 
-		public override void OnGotMeleeAttack( Mobile attacker )
-		{
-			base.OnGotMeleeAttack( attacker );
+        public override void OnGaveMeleeAttack(Mobile defender)
+        {
+            base.OnGaveMeleeAttack(defender);
 
-			if ( !m_BloodDiseaseTable.ContainsKey( attacker ) && this.InRange( attacker, 1 ) && 0.25 > Utility.RandomDouble()/* && !FontOfFortune.HasBlessing( attacker, FontOfFortune.BlessingType.Protection )*/ )
-			{
-				// The rotworm has infected you with blood disease!!
-				attacker.SendLocalizedMessage( 1111672, "", 0x25 );
+            TryInfect(defender);
+        }
 
-				attacker.PlaySound( 0x213 );
-				Effects.SendTargetParticles( attacker, 0x373A, 1, 15, 0x26B9, EffectLayer.Head );
+        private void TryInfect(Mobile attacker)
+        {
+            if (!m_BloodDiseaseTable.ContainsKey(attacker) && this.InRange(attacker, 1) && 0.25 > Utility.RandomDouble() && !FountainOfFortune.UnderProtection(attacker))
+            {
+                // The rotworm has infected you with blood disease!!
+                attacker.SendLocalizedMessage(1111672, "", 0x25);
 
-				BloodDiseaseTimer timer = new BloodDiseaseTimer( attacker );
-				timer.Start();
+                attacker.PlaySound(0x213);
+                Effects.SendTargetParticles(attacker, 0x373A, 1, 15, 0x26B9, EffectLayer.Head);
 
-				m_BloodDiseaseTable.Add( attacker, timer );
-			}
-		}
+                BloodDiseaseTimer timer = new BloodDiseaseTimer(attacker);
+                timer.Start();
 
-		public override void OnAfterMove( Point3D oldLocation )
-		{
-			base.OnAfterMove( oldLocation );
+                // TODO: 2nd cliloc
+                BuffInfo.AddBuff(attacker, new BuffInfo(BuffIcon.RotwormBloodDisease, 1153798, 1153798));
 
-			if ( Hits < HitsMax && 0.25 > Utility.RandomDouble() )
-			{
-				Corpse toAbsorb = null;
+                m_BloodDiseaseTable.Add(attacker, timer);
+            }
+        }
 
-				foreach ( Item item in Map.GetItemsInRange( Location, 1 ) )
-				{
-					if ( item is Corpse )
-					{
-						Corpse c = (Corpse) item;
+        private class BloodDiseaseTimer : Timer
+        {
+            private const int MaxCount = 8;
 
-						if ( c.ItemID == 0x2006 )
-						{
-							toAbsorb = c;
-							break;
-						}
-					}
-				}
+            private int m_Count;
+            private Mobile m_Victim;
 
-				if ( toAbsorb != null )
-				{
-					if ( toAbsorb.Owner == null || toAbsorb.Owner.Player )
-					{
-						// * The rotworm attempts to absorb the remains, but cannot! *
-						PublicOverheadMessage( MessageType.Regular, 0x3B2, 1111666 );
-					}
-					else
-					{
-						toAbsorb.ProcessDelta();
-						toAbsorb.SendRemovePacket();
-						toAbsorb.ItemID = Utility.Random( 0xECA, 9 ); // bone graphic
-						toAbsorb.Hue = 0;
-						toAbsorb.Direction = Direction.North;
-						toAbsorb.ProcessDelta();
+            public BloodDiseaseTimer(Mobile m)
+                : base(TimeSpan.FromSeconds(2.0), TimeSpan.FromSeconds(2.0))
+            {
+                m_Victim = m;
+            }
 
-						Hits = HitsMax;
+            protected override void OnTick()
+            {
+                if (m_Count == MaxCount || m_Victim.Deleted || !m_Victim.Alive || m_Victim.IsDeadBondedPet)
+                {
+                    // You no longer feel sick.
+                    m_Victim.SendLocalizedMessage(1111673);
 
-						// * The rotworm absorbs the fleshy remains of the corpse *
-						PublicOverheadMessage( MessageType.Regular, 0x3B2, 1111667 );
-					}
-				}
-			}
-		}
+                    m_BloodDiseaseTable.Remove(m_Victim);
 
-		private class BloodDiseaseTimer : Timer
-		{
-			private const int MaxCount = 8;
+                    BuffInfo.RemoveBuff(m_Victim, BuffIcon.RotwormBloodDisease);
 
-			private int m_Count;
-			private Mobile m_Victim;
+                    Stop();
+                }
+                else if (m_Count > 0)
+                {
+                    AOS.Damage(m_Victim, Utility.RandomMinMax(10, 20), 0, 0, 0, 100, 0);
+                    m_Victim.Combatant = null;
+                }
 
-			public BloodDiseaseTimer( Mobile m )
-				: base( TimeSpan.FromSeconds( 2.0 ), TimeSpan.FromSeconds( 2.0 ) )
-			{
-				m_Victim = m;
-			}
+                m_Count++;
+            }
+        }
 
-			protected override void OnTick()
-			{
-				if ( m_Count == MaxCount || m_Victim.Deleted || !m_Victim.Alive || m_Victim.IsDeadBondedPet )
-				{
-					// You no longer feel sick.
-					m_Victim.SendLocalizedMessage( 1111673 );
+        public override void Serialize(GenericWriter writer)
+        {
+            base.Serialize(writer);
+            writer.Write((int)0);
+        }
 
-					m_BloodDiseaseTable.Remove( m_Victim );
-					Stop();
-				}
-				else if ( m_Count > 0 )
-				{
-					AOS.Damage( m_Victim, Utility.RandomMinMax( 10, 20 ), 0, 0, 0, 100, 0 );
-					m_Victim.Combatant = null;
-				}
-
-				m_Count++;
-			}
-		}
-
-		public override void Serialize( GenericWriter writer )
-		{
-			base.Serialize( writer );
-
-			writer.Write( (int) 0 );
-		}
-
-		public override void Deserialize( GenericReader reader )
-		{
-			base.Deserialize( reader );
-
-			/*int version = */
-			reader.ReadInt();
-		}
-	}
+        public override void Deserialize(GenericReader reader)
+        {
+            base.Deserialize(reader);
+            int version = reader.ReadInt();
+        }
+    }
 }

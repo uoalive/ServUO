@@ -286,7 +286,8 @@ namespace Server.Mobiles
             if (map == null)
                 return;
             ArrayList targets = new ArrayList();
-            foreach (Mobile m in this.GetMobilesInRange(8))
+            IPooledEnumerable eable = GetMobilesInRange(8);
+            foreach (Mobile m in eable)
             {
                 if (m == this || !this.CanBeHarmful(m))
                     continue;
@@ -295,6 +296,7 @@ namespace Server.Mobiles
                 else if (m.Player)
                     targets.Add(m);
             }
+            eable.Free();
             this.PlaySound(0x2F3);
             for (int i = 0; i < targets.Count; ++i)
             {
@@ -304,7 +306,7 @@ namespace Server.Mobiles
                     PlayerMobile pm = m as PlayerMobile;
                     if (pm != null && pm.Mounted)
                     {
-                        pm.Mount.Rider = null;
+                        pm.SetMountBlock(BlockMountType.DismountRecovery, TimeSpan.FromSeconds(10), true);
                     }
                 }
                 double damage = m.Hits * 0.6;//was .6

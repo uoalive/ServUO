@@ -1,9 +1,11 @@
 ﻿using System;
 using Server;
+using Server.Engines.Craft;
 
 namespace Server.Items
 {
-    public class RangersCloakOfAugmentation : Cloak
+    [Alterable(typeof(DefTailoring), typeof(WardensArmorOfAugmentation))]
+    public class RangersCloakOfAugmentation : Cloak, ITokunoDyable
     {
         public override bool IsArtifact { get { return true; } }
         public override int LabelNumber { get { return 1115514; } } // Ranger's Cloak Of Augmentation

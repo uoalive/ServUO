@@ -1,6 +1,5 @@
 using System;
 using Server.Accounting;
-using Server.Engines.XmlSpawner2;
 using Server.Items;
 using Server.Mobiles;
 using Server.Network;
@@ -11,6 +10,8 @@ namespace Server.Misc
     public class CharacterCreation
     {
         private static readonly CityInfo m_NewHavenInfo = new CityInfo("New Haven", "The Bountiful Harvest Inn", 3503, 2574, 14, Map.Trammel);
+        private static readonly CityInfo m_SiegeInfo = new CityInfo("Britain", "The Wayfarer's Inn", 1075074, 1602, 1591, 20, Map.Felucca);
+
         private static Mobile m_Mobile;
         public static void Initialize()
         {
@@ -179,8 +180,7 @@ namespace Server.Misc
             else
                 newChar.Race = Race.DefaultRace;
 
-            //newChar.Hue = Utility.ClipSkinHue( args.Hue & 0x3FFF ) | 0x8000;
-            newChar.Hue = newChar.Race.ClipSkinHue(args.Hue & 0x3FFF) | 0x8000;
+            newChar.Hue = args.Hue | 0x8000;
 
             newChar.Hunger = 20;
 
@@ -198,7 +198,7 @@ namespace Server.Misc
                 }
                 pm.Profession = args.Profession;
 
-                if (pm.IsPlayer() && ((Account)pm.Account).Young)
+                if (pm.IsPlayer() && ((Account)pm.Account).Young && !Siege.SiegeShard)
                     young = pm.Young = true;
             }
 
@@ -214,13 +214,26 @@ namespace Server.Misc
             if (race.ValidateHair(newChar, args.HairID))
             {
                 newChar.HairItemID = args.HairID;
-                newChar.HairHue = race.ClipHairHue(args.HairHue & 0x3FFF);
+                newChar.HairHue = args.HairHue;
             }
 
             if (race.ValidateFacialHair(newChar, args.BeardID))
             {
                 newChar.FacialHairItemID = args.BeardID;
-                newChar.FacialHairHue = race.ClipHairHue(args.BeardHue & 0x3FFF);
+                newChar.FacialHairHue = args.BeardHue;
+            }
+
+            int faceID = args.FaceID;
+
+            if (faceID > 0 && race.ValidateFace(newChar.Female, faceID))
+            {
+                newChar.FaceItemID = faceID;
+                newChar.FaceHue = args.FaceHue;
+            }
+            else
+            {
+                newChar.FaceItemID = race.RandomFace(newChar.Female);
+                newChar.FaceHue = newChar.Hue;
             }
 
             if (args.Profession <= 3)
@@ -240,9 +253,10 @@ namespace Server.Misc
                 newChar.BankBox.DropItem(ticket);
             }
 
-            CityInfo city = GetStartLocation(args, young);
+            CityInfo city = args.City;
+            Map map = Siege.SiegeShard && city.Map == Map.Trammel ? Map.Felucca : city.Map;
 
-            newChar.MoveToWorld(city.Location, city.Map);
+            newChar.MoveToWorld(city.Location, map);
 
             Utility.PushColor(ConsoleColor.Green);
             Console.WriteLine("Login: {0}: New character being created (account={1})", state, args.Account.Username);
@@ -253,105 +267,6 @@ namespace Server.Misc
             Utility.PopColor();
 
             new WelcomeTimer(newChar).Start();
-
-			if (XmlSpawner.PointsEnabled)
-				XmlAttach.AttachTo(newChar, new XmlPoints());
-			if(XmlSpawner.FactionsEnabled)
-				XmlAttach.AttachTo(newChar, new XmlMobFactions());
-        }
-
-        private static CityInfo GetStartLocation(CharacterCreatedEventArgs args, bool isYoung)
-        {
-            if (Core.ML)
-            {
-                //if( args.State != null && args.State.NewHaven )
-                return m_NewHavenInfo;	//We don't get the client Version until AFTER Character creation
-                //return args.City;  TODO: Uncomment when the old quest system is actually phased out
-            }
-
-            bool useHaven = isYoung;
-
-            ClientFlags flags = args.State == null ? ClientFlags.None : args.State.Flags;
-            Mobile m = args.Mobile;
-
-            switch ( args.Profession )
-            {
-                case 4: //Necro
-                    {
-                        if ((flags & ClientFlags.Malas) != 0)
-                        {
-                            return new CityInfo("Umbra", "Mardoth's Tower", 2114, 1301, -50, Map.Malas);
-                        }
-                        else
-                        {
-                            useHaven = true; 
-
-                            new BadStartMessage(m, 1062205);
-                            /*
-                            * Unfortunately you are playing on a *NON-Age-Of-Shadows* game 
-                            * installation and cannot be transported to Malas.  
-                            * You will not be able to take your new player quest in Malas 
-                            * without an AOS client.  You are now being taken to the city of 
-                            * Haven on the Trammel facet.
-                            * */
-                        }
-
-                        break;
-                    }
-                case 5:	//Paladin
-                    {
-                        return m_NewHavenInfo;
-                    }
-                case 6:	//Samurai
-                    {
-                        if ((flags & ClientFlags.Tokuno) != 0)
-                        {
-                            return new CityInfo("Samurai DE", "Haoti's Grounds", 368, 780, -1, Map.Malas);
-                        }
-                        else
-                        {
-                            useHaven = true;
-
-                            new BadStartMessage(m, 1063487);
-                            /*
-                            * Unfortunately you are playing on a *NON-Samurai-Empire* game 
-                            * installation and cannot be transported to Tokuno. 
-                            * You will not be able to take your new player quest in Tokuno 
-                            * without an SE client. You are now being taken to the city of 
-                            * Haven on the Trammel facet.
-                            * */
-                        }
-
-                        break;
-                    }
-                case 7:	//Ninja
-                    {
-                        if ((flags & ClientFlags.Tokuno) != 0)
-                        {
-                            return new CityInfo("Ninja DE", "Enimo's Residence", 414,	823, -1, Map.Malas);
-                        }
-                        else
-                        {
-                            useHaven = true;
-
-                            new BadStartMessage(m, 1063487);
-                            /*
-                            * Unfortunately you are playing on a *NON-Samurai-Empire* game 
-                            * installation and cannot be transported to Tokuno. 
-                            * You will not be able to take your new player quest in Tokuno 
-                            * without an SE client. You are now being taken to the city of 
-                            * Haven on the Trammel facet.
-                            * */
-                        }
-
-                        break;
-                    }
-            }
-
-            if (useHaven)
-                return m_NewHavenInfo;
-            else
-                return args.City;
         }
 
         private static void FixStats(ref int str, ref int dex, ref int intel, int max)

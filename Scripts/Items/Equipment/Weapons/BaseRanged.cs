@@ -30,17 +30,18 @@ namespace Server.Items
 		public override SkillName AccuracySkill { get { return SkillName.Archery; } }
 
 		private Timer m_RecoveryTimer; // so we don't start too many timers
-		private bool m_Balanced;
 		private int m_Velocity;
 
 		[CommandProperty(AccessLevel.GameMaster)]
 		public bool Balanced
 		{
-			get { return m_Balanced; }
+            get { return Attributes.BalancedWeapon > 0; }
 			set
 			{
-				m_Balanced = value;
-				InvalidateProperties();
+                if (value)
+                    Attributes.BalancedWeapon = 1;
+                else
+                    Attributes.BalancedWeapon = 0;
 			}
 		}
 
@@ -65,8 +66,15 @@ namespace Server.Items
 
 		public override TimeSpan OnSwing(Mobile attacker, IDamageable damageable)
 		{
+            long nextShoot;
+
+            if (attacker is PlayerMobile)
+                nextShoot = ((PlayerMobile)attacker).NextMovementTime + (Core.SE ? 250 : Core.AOS ? 500 : 1000);
+            else
+                nextShoot = attacker.LastMoveTime + attacker.ComputeMovementSpeed();
+
 			// Make sure we've been standing still for .25/.5/1 second depending on Era
-			if (Core.TickCount - attacker.LastMoveTime >= (Core.SE ? 250 : Core.AOS ? 500 : 1000) ||
+            if (nextShoot <= Core.TickCount ||
 				(Core.AOS && WeaponAbility.GetCurrentAbility(attacker) is MovingShot))
 			{
 				bool canSwing = true;
@@ -82,18 +90,6 @@ namespace Server.Items
 						canSwing = (sp == null || !sp.IsCasting || !sp.BlocksMovement);
 					}
 				}
-
-				#region Dueling
-				if (attacker is PlayerMobile)
-				{
-					PlayerMobile pm = (PlayerMobile)attacker;
-
-					if (pm.DuelContext != null && !pm.DuelContext.CheckItemEquip(attacker, this))
-					{
-						canSwing = false;
-					}
-				}
-				#endregion
 
 				if (canSwing && attacker.HarmfulCheck(damageable))
 				{
@@ -247,9 +243,8 @@ namespace Server.Items
 		{
 			base.Serialize(writer);
 
-			writer.Write(3); // version
+			writer.Write(4); // version
 
-			writer.Write(m_Balanced);
 			writer.Write(m_Velocity);
 		}
 
@@ -261,9 +256,12 @@ namespace Server.Items
 
 			switch (version)
 			{
+                case 4:
 				case 3:
 					{
-						m_Balanced = reader.ReadBool();
+                        if (version == 3 && reader.ReadBool())
+                            Attributes.BalancedWeapon = 1;
+
 						m_Velocity = reader.ReadInt();
 
 						goto case 2;

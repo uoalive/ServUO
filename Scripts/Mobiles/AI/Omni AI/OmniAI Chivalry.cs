@@ -79,7 +79,7 @@ namespace Server.Mobiles
 
             BaseWeapon weapon = this.m_Mobile.Weapon as BaseWeapon;
 
-            if (weapon != null && !weapon.Consecrated)
+            if (weapon != null && weapon.ConsecratedContext != null)
                 return true;
             else
                 return false;
@@ -94,8 +94,9 @@ namespace Server.Mobiles
                 return false;
 
             bool cast = false;
+            IPooledEnumerable eable = m_Mobile.GetMobilesInRange(4);
 
-            foreach (Mobile m in this.m_Mobile.GetMobilesInRange(4))
+            foreach (Mobile m in eable)
             {
                 if (m != null)
                 {
@@ -106,9 +107,9 @@ namespace Server.Mobiles
                     else if (TransformationSpellHelper.GetContext(m) != null)
                         cast = true;
                 }
-                continue;
             }
 
+            eable.Free();
             return cast;
         }
 

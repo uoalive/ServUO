@@ -12,7 +12,8 @@ namespace Server.Items
         NotInHouse,
         DoorTooClose,
         NoWall,
-        DoorsNotClosed
+        DoorsNotClosed,
+        BadHouse
     }
 
     public interface IAddon
@@ -77,6 +78,8 @@ namespace Server.Items
             }
         }
 
+        public virtual bool RestrictToClassicHouses { get { return false; } }
+
         public virtual void OnChop(Mobile from)
         {
             BaseHouse house = BaseHouse.FindHouseAt(this);
@@ -90,7 +93,7 @@ namespace Server.Items
             }
             #endregion
 
-            if (house != null && house.IsOwner(from) && house.Addons.Contains(this))
+            if (house != null && (house.IsOwner(from) || (house.Addons.ContainsKey(this) && house.Addons[this] == from)))
             {
                 Effects.PlaySound(this.GetWorldLocation(), this.Map, 0x3B3);
                 from.SendLocalizedMessage(500461); // You destroy the item.
@@ -123,6 +126,10 @@ namespace Server.Items
 
                     from.AddToBackpack(deed);
                 }
+            }
+            else
+            {
+                from.SendLocalizedMessage(1113134); // You can only redeed items in your own house!
             }
         }
 
@@ -202,7 +209,10 @@ namespace Server.Items
 
             if (house != null)
             {
-                ArrayList doors = house.Doors;
+                if (RestrictToClassicHouses && house is HouseFoundation)
+                    return AddonFitResult.BadHouse;
+
+                var doors = house.Doors;
 
                 for (int i = 0; i < doors.Count; ++i)
                 {
@@ -229,7 +239,7 @@ namespace Server.Items
         {
             house = BaseHouse.FindHouseAt(p, map, height);
 
-            if (house == null || (from != null && !house.IsOwner(from)))
+            if (house == null || (from != null && !house.IsCoOwner(from)))
                 return false;
 
             return true;
@@ -362,7 +372,9 @@ namespace Server.Items
         {
             base.Serialize(writer);
 
-            writer.Write((int)1); // version
+            writer.Write((int)2); // version
+
+            writer.Write((int)m_Resource);
 
             writer.WriteItemList<AddonComponent>(this.m_Components);
         }
@@ -375,6 +387,9 @@ namespace Server.Items
 
             switch ( version )
             {
+                case 2:
+                    m_Resource = (CraftResource)reader.ReadInt();
+                    goto case 1;
                 case 1:
                 case 0:
                     {

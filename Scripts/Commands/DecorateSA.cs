@@ -1,5 +1,6 @@
 using System;
 using Server.Commands;
+using Server.Items;
 
 namespace Server
 {
@@ -26,7 +27,14 @@ namespace Server
             Decorate.Generate("sa", "Data/Decoration/Stygian Abyss/Ter Mur", Map.TerMur);
 			Decorate.Generate("sa", "Data/Decoration/Stygian Abyss/Trammel", Map.Trammel);
 			Decorate.Generate("sa", "Data/Decoration/Stygian Abyss/Felucca", Map.Felucca);
-			
+
+            NavreysController.GenNavery(e.Mobile);
+            CommandSystem.Handle(e.Mobile, Server.Commands.CommandSystem.Prefix + "GenToK");
+            Server.Engines.CannedEvil.PrimevalLichPuzzle.GenLichPuzzle(e.Mobile);
+            CommandSystem.Handle(e.Mobile, Server.Commands.CommandSystem.Prefix + "GenSutek");
+
+            GenerateUnderworldRooms.Generate();
+
             e.Mobile.SendMessage("Stygian Abyss world generation complete.");
         }
     }

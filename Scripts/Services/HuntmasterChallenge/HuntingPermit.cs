@@ -125,11 +125,16 @@ namespace Server.Items
                         from.SendLocalizedMessage(1155707);	  // You cannot document someone else's kill.
                     else
                     {
+                        Type t = c.Owner.GetType();
+
+                        if (t == typeof(RagingGrizzlyBear)) // Bandaid Fix, we'll keep this until others arise
+                            t = typeof(GrizzlyBear);
+
                         for (int i = 0; i < HuntingTrophyInfo.Infos.Count; i++)
                         {
                             HuntingTrophyInfo info = HuntingTrophyInfo.Infos[i];
 
-                            if (c.Owner.GetType() == info.CreatureType)
+                            if (t == info.CreatureType)
                             {
                                 int v = 0;
 
@@ -145,7 +150,7 @@ namespace Server.Items
                                 }
 
                                 int measurement = info.MinMeasurement + (int)((double)(info.MaxMeasurement - info.MinMeasurement) * (double)((double)v / 100.0));
-                                m_Permit.KillEntry = new HuntingKillEntry(from, measurement, DateTime.Now, i, WorldLocationInfo.GetLocationString(c.Location, c.Map));
+                                m_Permit.KillEntry = new HuntingKillEntry(m_Permit.Owner, measurement, DateTime.Now, i, WorldLocationInfo.GetLocationString(c.Location, c.Map));
                                 c.VisitedByTaxidermist = true;
 
                                 from.PlaySound(0x249);

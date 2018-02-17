@@ -80,6 +80,58 @@ namespace Server.Items
             }
         }
 
+        public static void PrivateOverheadMessage(this Item item, MessageType type, int hue, bool ascii, string text, NetState state)
+        {
+            if (item.Map != null && state != null)
+            {
+                Point3D worldLoc = item.GetWorldLocation();
+
+                Mobile m = state.Mobile;
+
+                if (m != null && m.CanSee(item) && m.InRange(worldLoc, item.GetUpdateRange(m)))
+                {
+                    if (ascii)
+                    {
+                        state.Send(new AsciiMessage(item.Serial, item.ItemID, type, hue, 3, item.Name, text));
+                    }
+                    else
+                    {
+                        state.Send(new UnicodeMessage(item.Serial, item.ItemID, type, hue, 3, m.Language, item.Name, text));
+                    }
+                }
+            }
+        }
+
+        public static void SendLocalizedMessage(this Item item, int number, string args)
+        {
+            if (item == null || item.Map == null)
+                return;
+
+            IPooledEnumerable eable = item.Map.GetClientsInRange(item.Location, 12);
+
+            foreach (NetState ns in eable)
+            {
+                ns.Send(new MessageLocalized(item.Serial, item.ItemID, MessageType.Regular, 0x3B2, 3, number, item.Name, args));
+            }
+            
+            eable.Free();
+        }
+
+        public static void SendLocalizedMessage(this Item item, MessageType type, int number, AffixType affixType, string affix, string args)
+        {
+            if (item == null || item.Map == null)
+                return;
+
+            IPooledEnumerable eable = item.Map.GetClientsInRange(item.Location, 12);
+
+            foreach (NetState ns in eable)
+            {
+                ns.Send(new MessageLocalizedAffix(item.Serial, item.ItemID, type, 0x3B2, 3, number, "", affixType, affix, args));
+            }
+            
+            eable.Free();
+        }
+
         public static bool InLOS(this Item item, Point3D target)
         {
             if (item.Deleted || item.Map == null || item.Parent != null)
@@ -90,8 +142,92 @@ namespace Server.Items
     }
 }
 
+namespace Server.Mobiles
+{
+    public static class MobileExtensions
+    {
+        public static void SayTo(this Mobile mobile, Mobile to, int number, int hue)
+        {
+            mobile.PrivateOverheadMessage(MessageType.Regular, hue, number, to.NetState);
+        }
+
+        public static void SayTo(this Mobile mobile, Mobile to, int number, string args, int hue)
+        {
+            mobile.PrivateOverheadMessage(MessageType.Regular, hue, number, args, to.NetState);
+        }
+
+        public static void SayTo(this Mobile mobile, Mobile to, string text, int hue, bool ascii = false)
+        {
+            mobile.PrivateOverheadMessage(MessageType.Regular, hue, ascii, text, to.NetState);
+        }
+
+        public static void Say(this Mobile mobile, int number, int hue)
+        {
+            mobile.PublicOverheadMessage(MessageType.Regular, hue, number);
+        }
+
+        public static void Say(this Mobile mobile, int number, string args, int hue)
+        {
+            mobile.PublicOverheadMessage(MessageType.Regular, hue, number, args);
+        }
+
+        public static void Say(this Mobile mobile, string text, int hue, bool ascii = false)
+        {
+            mobile.PublicOverheadMessage(MessageType.Regular, hue, ascii, text);
+        }
+
+        public static void PrivateOverheadMessage(this Mobile mobile, MessageType type, int hue, int number, AffixType affixType, string affix, string args, NetState state)
+        {
+            state.Send(new MessageLocalizedAffix(mobile.Serial, mobile.Body, type, hue, 3, number, mobile.Name, affixType, affix, args));
+        }
+    }
+}
+
 namespace Server
 {
+    public static class MapExtensions
+    {
+        public static TItem FindItem<TItem>(this Map map, Point3D p, int range = 0) where TItem : Item
+        {
+            if (map == null)
+                return null;
+
+            IPooledEnumerable eable = map.GetItemsInRange(p, range);
+
+            foreach (Item item in eable)
+            {
+                if (item.GetType() == typeof(TItem))
+                {
+                    eable.Free();
+                    return item as TItem;
+                }
+            }
+
+            eable.Free();
+            return null;
+        }
+
+        public static TMob FindMobile<TMob>(this Map map, Point3D p, int range = 0) where TMob : Mobile
+        {
+            if (map == null)
+                return null;
+
+            IPooledEnumerable eable = map.GetMobilesInRange(p, range);
+
+            foreach (Mobile m in eable)
+            {
+                if (m.GetType() == typeof(TMob))
+                {
+                    eable.Free();
+                    return m as TMob;
+                }
+            }
+
+            eable.Free();
+            return null;
+        }
+    }
+
     public static class GeomontryExtentions
     {
         public static Point3D GetRandomSpawnPoint(this Rectangle2D rec, Map map)
@@ -115,6 +251,9 @@ namespace Server
 
         public static List<Item> GetItems(this Region region)
         {
+            if (region == null || region.Sectors == null)
+                return null;
+
             List<Item> list = new List<Item>();
 
             foreach(Sector s in region.Sectors)
@@ -130,6 +269,11 @@ namespace Server
 
         public static IEnumerable<Item> GetEnumeratedItems(this Region region)
         {
+            if (region == null)
+            {
+                yield break;
+            }
+
             List<Item> list = region.GetItems();
             IEnumerable<Item> e;
 
@@ -149,6 +293,11 @@ namespace Server
 
         public static int GetItemCount(this Region region)
         {
+            if (region == null || region.Sectors == null)
+            {
+                return 0;
+            }
+
             int count = 0;
 
             foreach(Sector s in region.Sectors)
@@ -161,6 +310,11 @@ namespace Server
 
         public static int GetItemCount(this Region region, Func<Item, bool> predicate)
         {
+            if (region == null || region.Sectors == null)
+            {
+                return 0;
+            }
+
             int count = 0;
 
             foreach(Sector s in region.Sectors)
@@ -173,6 +327,11 @@ namespace Server
 
         public static List<BaseMulti> GetMultis(this Region region)
         {
+            if (region == null || region.Sectors == null)
+            {
+                return null;
+            }
+
             List<BaseMulti> list = new List<BaseMulti>();
 
             foreach (Sector s in region.Sectors)
@@ -188,6 +347,11 @@ namespace Server
 
         public static IEnumerable<BaseMulti> GetEnumeratedMultis(this Region region)
         {
+            if (region == null)
+            {
+                yield break;
+            }
+
             List<BaseMulti> list = region.GetMultis();
             IEnumerable<BaseMulti> e;
 
@@ -207,6 +371,11 @@ namespace Server
 
         public static int GetMultiCount(this Region region)
         {
+            if (region == null)
+            {
+                return 0;
+            }
+
             int count = 0;
 
             foreach (Sector s in region.Sectors)
@@ -219,6 +388,11 @@ namespace Server
 
         public static IEnumerable<Mobile> GetEnumeratedMobiles(this Region region)
         {
+            if (region == null)
+            {
+                yield break;
+            }
+
             List<Mobile> list = region.GetMobiles();
             IEnumerable<Mobile> e;
 
@@ -232,8 +406,85 @@ namespace Server
                 yield return m;
             }
 
-            list.Clear();
-            list.TrimExcess();
+            ColUtility.Free(list);
+        }
+    }
+
+    public static class ColUtility
+    {
+        public static void Free<T>(List<T> l)
+        {
+            if (l == null)
+                return;
+
+            l.Clear();
+            l.TrimExcess();
+        }
+
+        public static void ForEach<T>(IEnumerable<T> list, Action<T> action)
+        {
+            if (list == null || action == null)
+                return;
+
+            List<T> l = list.ToList();
+
+            foreach (T o in l)
+                action(o);
+
+            Free(l);
+        }
+
+        public static void ForEach<TKey, TValue>(
+            IDictionary<TKey, TValue> dictionary, Action<KeyValuePair<TKey, TValue>> action)
+        {
+            if (dictionary == null || dictionary.Count == 0 || action == null)
+                return;
+
+            List<KeyValuePair<TKey, TValue>> l = dictionary.ToList();
+
+            foreach (KeyValuePair<TKey, TValue> kvp in l)
+                action(kvp);
+
+            Free(l);
+        }
+
+        public static void ForEach<TKey, TValue>(IDictionary<TKey, TValue> dictionary, Action<TKey, TValue> action)
+        {
+            if (dictionary == null || dictionary.Count == 0 || action == null)
+                return;
+
+            List<KeyValuePair<TKey, TValue>> l = dictionary.ToList();
+
+            foreach (KeyValuePair<TKey, TValue> kvp in l)
+                action(kvp.Key, kvp.Value);
+
+            Free(l);
+        }
+
+        public static void For<T>(IEnumerable<T> list, Action<int, T> action)
+        {
+            if (list == null || action == null)
+                return;
+
+            List<T> l = list.ToList();
+
+            for (int i = 0; i < l.Count; i++)
+                action(i, l[i]);
+
+            Free(l);
+        }
+
+        public static void For<TKey, TValue>(IDictionary<TKey, TValue> list, Action<int, TKey, TValue> action)
+        {
+            if (list == null || action == null)
+                return;
+
+            List<KeyValuePair<TKey, TValue>> l = list.ToList();
+
+            for (int i = 0; i < l.Count; i++)
+                action(i, l[i].Key, l[i].Value);
+
+            Free(l);
         }
     }
 }

@@ -110,9 +110,9 @@ namespace Server
         Bracelet = 0x0E,
 
         /// <summary>
-        ///     Unused.
+        ///     Face.
         /// </summary>
-        Unused_xF = 0x0F,
+        Face = 0x0F,
 
         /// <summary>
         ///     Beards and mustaches.
@@ -190,9 +190,15 @@ namespace Server
         Bank = 0x1D,
 
         /// <summary>
-        ///     Last valid layer. Equivalent to <c>Layer.Bank</c>.
+        /// Unused, using this layer makes you invisible to other players. Strange.
         /// </summary>
-        LastValid = 0x1D
+        /// 
+        Reserved_1 = 0x1E,
+
+        /// <summary>
+        ///     Secure Trade Layer
+        /// </summary>
+        SecureTrade = 0x1F,
     }
 
     /// <summary>
@@ -561,14 +567,18 @@ namespace Server
         public Point3D m_Location, m_WorldLoc;
         public object m_Parent;
         public IEntity m_ParentStack;
+        public byte m_GridLocation;
+        public Mobile m_Mobile;
 
-        public BounceInfo(Item item)
+        public BounceInfo(Mobile from, Item item)
         {
             m_Map = item.Map;
             m_Location = item.Location;
             m_WorldLoc = item.GetWorldLocation();
             m_Parent = item.Parent;
             m_ParentStack = null;
+            m_GridLocation = item.GridLocation;
+            m_Mobile = from;
         }
 
         private BounceInfo(Map map, Point3D loc, Point3D worldLoc, object parent)
@@ -857,6 +867,32 @@ namespace Server
                 }
             }
         }
+        
+        private byte m_GridLocation = 0;
+
+        [CommandProperty(AccessLevel.GameMaster)]
+        public byte GridLocation
+        {
+            get { return m_GridLocation; }
+            set
+            {
+                if (Parent is Container)
+                {
+                    if ( value > 0 && value <= 0x7C)
+                    {
+                        m_GridLocation = value;
+                        ((Container)Parent).SetPosition(m_GridLocation, this);
+                        return;
+                    }
+                    else if (value == 0)
+                    {
+                        ((Container)Parent).FreePosition(m_GridLocation);
+                    }
+                }
+
+                m_GridLocation = value;
+            }
+        }
 
         [Flags]
         private enum ImplFlag : byte
@@ -1038,9 +1074,12 @@ namespace Server
             }
             catch
             {
-                Utility.PushColor(ConsoleColor.Red);
-                Console.WriteLine("Ultima Art: Unable to read client files.");
-                Utility.PopColor();
+		if(Core.Debug)
+		{
+                	Utility.PushColor(ConsoleColor.Red);
+                	Console.WriteLine("Ultima Art: Unable to read client files.");
+                	Utility.PopColor();
+		}
             }
 
             return null;
@@ -1095,11 +1134,11 @@ namespace Server
             return null;
         }
 
-        public void RecordBounce(Item parentstack = null)
+        public void RecordBounce(Mobile from, Item parentstack = null)
         {
             CompactInfo info = AcquireCompactInfo();
 
-            info.m_Bounce = new BounceInfo(this);
+            info.m_Bounce = new BounceInfo(from, this);
             info.m_Bounce.m_ParentStack = parentstack;
         }
 
@@ -1312,6 +1351,9 @@ namespace Server
         /// </summary>
         public virtual void AddWeightProperty(ObjectPropertyList list)
         {
+            if (Weight == 0)
+                return;
+
             int weight = PileWeight + TotalWeight;
 
             if (weight == 1)
@@ -1344,11 +1386,6 @@ namespace Server
             else if (IsLockedDown)
             {
                 AddLockedDownProperty(list);
-            }
-
-            if (HonestyItem)
-            {
-                AddHonestyProperty(list);
             }
 
             Mobile blessedFor = BlessedFor;
@@ -1412,6 +1449,12 @@ namespace Server
         {
             if (HonestyItem)
             {
+                if (m_HonestyPickup != DateTime.MinValue)
+                {
+                    int minutes = (int)(m_HonestyPickup + TimeSpan.FromHours(3) - DateTime.UtcNow).TotalMinutes;
+                    list.Add(1151914, minutes.ToString()); // Minutes remaining for credit: ~1_val~
+                }
+
                 list.Add(1151520); // lost item (Return to gain Honesty)
             }
         }
@@ -1521,6 +1564,7 @@ namespace Server
                     if (p.IsAccessibleTo(from) && (!(root is Mobile) || ((Mobile)root).CheckNonlocalDrop(from, this, p)))
                     {
                         Location = bounce.m_Location;
+
                         p.AddItem(this);
                     }
                     else
@@ -1599,6 +1643,11 @@ namespace Server
             else if (m_Parent is Mobile)
             {
                 ((Mobile)m_Parent).GetChildContextMenuEntries(from, list, this);
+            }
+
+            if (from.Region != null)
+            {
+                from.Region.GetContextMenuEntries(from, list, this);
             }
         }
 
@@ -1757,13 +1806,13 @@ namespace Server
 
                     if (oldLocation.m_X != 0)
                     {
-                        var eable = m_Map.GetClientsInRange(oldLocation, GetMaxUpdateRange());
+                        var eable = m_Map.GetClientsInRange(oldLocation, Core.GlobalMaxUpdateRange);
 
                         foreach (NetState state in eable)
                         {
                             Mobile m = state.Mobile;
 
-                            if (m.InRange(oldLocation, GetUpdateRange(m)))
+                            if (m.InUpdateRange(oldLocation))
                             {
                                 state.Send(RemovePacket);
                             }
@@ -1799,13 +1848,13 @@ namespace Server
 
                 if (m_Map != null)
                 {
-                    var eable = m_Map.GetClientsInRange(m_Location, GetMaxUpdateRange());
+                    var eable = m_Map.GetClientsInRange(m_Location, Core.GlobalMaxUpdateRange);
 
                     foreach (NetState state in eable)
                     {
                         Mobile m = state.Mobile;
 
-                        if (m.CanSee(this) && m.InRange(m_Location, GetUpdateRange(m)))
+                        if (m.CanSee(this) && m.InUpdateRange(m_Location))
                         {
                             SendInfoTo(state);
                         }
@@ -1827,13 +1876,13 @@ namespace Server
 
                 if (oldLocation.m_X != 0)
                 {
-                    eable = m_Map.GetClientsInRange(oldLocation, GetMaxUpdateRange());
+                    eable = m_Map.GetClientsInRange(oldLocation, Core.GlobalMaxUpdateRange);
 
                     foreach (NetState state in eable)
                     {
                         Mobile m = state.Mobile;
 
-                        if (!m.InRange(location, GetUpdateRange(m)))
+                        if (!m.InUpdateRange(location))
                         {
                             state.Send(RemovePacket);
                         }
@@ -1849,13 +1898,13 @@ namespace Server
 
                 ReleaseWorldPackets();
 
-                eable = m_Map.GetClientsInRange(m_Location, GetMaxUpdateRange());
+                eable = m_Map.GetClientsInRange(m_Location, Core.GlobalMaxUpdateRange);
 
                 foreach (NetState state in eable)
                 {
                     Mobile m = state.Mobile;
 
-                    if (m.CanSee(this) && m.InRange(m_Location, GetUpdateRange(m)))
+                    if (m.CanSee(this) && m.InUpdateRange(m_Location))
                     {
                         SendInfoTo(state);
                     }
@@ -1896,6 +1945,8 @@ namespace Server
 
         public void CheckHonestyExpiry()
         {
+            InvalidateProperties();
+
             if ((m_HonestyPickup + TimeSpan.FromHours(3)) < DateTime.UtcNow)
             {
                 HonestyItem = false;
@@ -1997,9 +2048,7 @@ namespace Server
 
         public virtual bool StackWith(Mobile from, Item dropped, bool playSound)
         {
-            if (dropped.Stackable && Stackable && dropped.GetType() == GetType() && dropped.ItemID == ItemID &&
-                dropped.Hue == Hue && dropped.Name == Name && (dropped.Amount + Amount) <= 60000 && dropped != this &&
-                !dropped.Nontransferable && !Nontransferable)
+            if (WillStack(from, dropped))
             {
                 if (m_LootType != dropped.m_LootType)
                 {
@@ -2025,6 +2074,13 @@ namespace Server
             }
 
             return false;
+        }
+
+        public virtual bool WillStack(Mobile from, Item dropped)
+        {
+            return dropped.Stackable && Stackable && dropped.GetType() == GetType() && dropped.ItemID == ItemID &&
+                dropped.Hue == Hue && dropped.Name == Name && dropped.Amount + Amount <= 60000 && dropped != this &&
+                !dropped.Nontransferable && !Nontransferable;
         }
 
         public virtual bool OnDragDrop(Mobile from, Item dropped)
@@ -2308,7 +2364,7 @@ namespace Server
                     {
                         Point3D worldLoc = GetWorldLocation();
 
-                        var eable = m_Map.GetClientsInRange(worldLoc, GetMaxUpdateRange());
+                        var eable = m_Map.GetClientsInRange(worldLoc, Core.GlobalMaxUpdateRange);
 
                         foreach (NetState state in eable)
                         {
@@ -2343,7 +2399,7 @@ namespace Server
             }
         }
 
-        public virtual bool ForceShowProperties { get { return false; } }
+        public virtual bool ForceShowProperties { get { return IsLockedDown || IsSecure; } }
 
         public virtual int GetPacketFlags()
         {
@@ -2488,7 +2544,9 @@ namespace Server
 
         public virtual void Serialize(GenericWriter writer)
         {
-            writer.Write(10); // version
+            writer.Write(11); // version
+
+            writer.Write(m_GridLocation);
 
             //version 10
             writer.Write(m_HonestyPickup);
@@ -2959,6 +3017,9 @@ namespace Server
 
             switch (version)
             {
+                case 11:
+                    m_GridLocation = reader.ReadByte();
+                    goto case 10;
                 case 10:
                     {
                         m_HonestyPickup = reader.ReadDateTime();
@@ -3485,7 +3546,11 @@ namespace Server
                 Timer.DelayCall(TimeSpan.Zero, FixHolding_Sandbox);
             }
 
-            //if ( version < 9 )
+            if (m_Parent is Container)
+            {
+                ((Container)m_Parent).SetPosition(m_GridLocation, this);
+            }
+
             VerifyCompactInfo();
         }
 
@@ -3510,12 +3575,12 @@ namespace Server
 
         public virtual int GetMaxUpdateRange()
         {
-            return 18;
+            return 24;
         }
 
         public virtual int GetUpdateRange(Mobile m)
         {
-            return 18;
+            return m.NetState == null ? Core.GlobalUpdateRange : m.NetState.UpdateRange;
         }
 
         public void SendInfoTo(NetState state)
@@ -3532,7 +3597,7 @@ namespace Server
                 state.Send(OPLPacket);
             }
         }
-
+        
         protected virtual Packet GetWorldPacketFor(NetState state)
         {
             if (state.HighSeas)
@@ -3681,7 +3746,9 @@ namespace Server
             }
         }
 
-        public const int QuestItemHue = 0x4EA; // Hmmmm... "for EA"?
+        public virtual bool HiddenQuestItemHue { get; set; }
+
+        public int QuestItemHue { get { return (HiddenQuestItemHue ? Hue : 0x04EA); } }
 
         public virtual bool Nontransferable { get { return QuestItem; } }
 
@@ -4067,13 +4134,13 @@ namespace Server
                     Packet p = null;
                     Point3D worldLoc = GetWorldLocation();
 
-                    var eable = map.GetClientsInRange(worldLoc, GetMaxUpdateRange());
+                    var eable = map.GetClientsInRange(worldLoc, Core.GlobalMaxUpdateRange);
 
                     foreach (NetState state in eable)
                     {
                         Mobile m = state.Mobile;
 
-                        if (m.CanSee(this) && m.InRange(worldLoc, GetUpdateRange(m)))
+                        if (m.CanSee(this) && m.InUpdateRange(worldLoc))
                         {
                             if (m_Parent == null)
                             {
@@ -4130,13 +4197,13 @@ namespace Server
                         Packet p = null;
                         Point3D worldLoc = GetWorldLocation();
 
-                        var eable = map.GetClientsInRange(worldLoc, GetMaxUpdateRange());
+                        var eable = map.GetClientsInRange(worldLoc, Core.GlobalMaxUpdateRange);
 
                         foreach (NetState state in eable)
                         {
                             Mobile m = state.Mobile;
 
-                            if (m.CanSee(this) && m.InRange(worldLoc, GetUpdateRange(m)))
+                            if (m.CanSee(this) && m.InUpdateRange(worldLoc))
                             {
                                 //if ( sendOPLUpdate )
                                 //	state.Send( RemovePacket );
@@ -4165,13 +4232,13 @@ namespace Server
                 if (sendOPLUpdate)
                 {
                     Point3D worldLoc = GetWorldLocation();
-                    var eable = map.GetClientsInRange(worldLoc, GetMaxUpdateRange());
+                    var eable = map.GetClientsInRange(worldLoc, Core.GlobalMaxUpdateRange);
 
                     foreach (NetState state in eable)
                     {
                         Mobile m = state.Mobile;
 
-                        if (m.CanSee(this) && m.InRange(worldLoc, GetUpdateRange(m)))
+                        if (m.CanSee(this) && m.InUpdateRange(worldLoc))
                         {
                             state.Send(OPLPacket);
                         }
@@ -4266,6 +4333,13 @@ namespace Server
             }
             else if (Parent is Item)
             {
+                #region Enhanced Client Support
+                if (Parent is Container)
+                {
+                    ((Container)Parent).FreePosition(GridLocation);
+                }
+                #endregion
+
                 ((Item)Parent).RemoveItem(this);
             }
 
@@ -4294,13 +4368,13 @@ namespace Server
                 Packet p = null;
                 Point3D worldLoc = GetWorldLocation();
 
-                var eable = m_Map.GetClientsInRange(worldLoc, GetMaxUpdateRange());
+                var eable = m_Map.GetClientsInRange(worldLoc, Core.GlobalMaxUpdateRange);
 
                 foreach (NetState state in eable)
                 {
                     Mobile m = state.Mobile;
 
-                    if (m.CanSee(this) && m.InRange(worldLoc, GetUpdateRange(m)))
+                    if (m.CanSee(this) && m.InUpdateRange(worldLoc))
                     {
                         if (p == null)
                         {
@@ -4338,13 +4412,13 @@ namespace Server
                 Packet p = null;
                 Point3D worldLoc = GetWorldLocation();
 
-                var eable = m_Map.GetClientsInRange(worldLoc, GetMaxUpdateRange());
+                var eable = m_Map.GetClientsInRange(worldLoc, Core.GlobalMaxUpdateRange);
 
                 foreach (NetState state in eable)
                 {
                     Mobile m = state.Mobile;
 
-                    if (m.CanSee(this) && m.InRange(worldLoc, GetUpdateRange(m)))
+                    if (m.CanSee(this) && m.InUpdateRange(worldLoc))
                     {
                         if (p == null)
                         {
@@ -4377,6 +4451,13 @@ namespace Server
 
             if (items != null && items.Contains(item))
             {
+                #region Enhanced Client Support
+                if (item.Parent is Container && (!item.Stackable || item.Amount <= 0))
+				{
+					((Container)item.Parent).FreePosition(item.GridLocation);
+				}
+                #endregion
+
                 item.SendRemovePacket();
 
                 items.Remove(item);
@@ -4493,13 +4574,13 @@ namespace Server
 
                             if (m_Location.m_X != 0)
                             {
-                                eable = m_Map.GetClientsInRange(oldLocation, GetMaxUpdateRange());
+                                eable = m_Map.GetClientsInRange(oldLocation, Core.GlobalMaxUpdateRange);
 
                                 foreach (NetState state in eable)
                                 {
                                     Mobile m = state.Mobile;
 
-                                    if (!m.InRange(value, GetUpdateRange(m)))
+                                    if (!m.InUpdateRange(value))
                                     {
                                         state.Send(RemovePacket);
                                     }
@@ -4514,13 +4595,13 @@ namespace Server
 
                             SetLastMoved();
 
-                            eable = m_Map.GetClientsInRange(m_Location, GetMaxUpdateRange());
+                            eable = m_Map.GetClientsInRange(m_Location, Core.GlobalMaxUpdateRange);
 
                             foreach (NetState state in eable)
                             {
                                 Mobile m = state.Mobile;
 
-                                if (m.CanSee(this) && m.InRange(m_Location, GetUpdateRange(m)) &&
+                                if (m.CanSee(this) && m.InUpdateRange(m_Location) &&
                                     (!state.HighSeas || !m_NoMoveHS || (m_DeltaFlags & ItemDelta.Update) != 0 ||
                                      !m.InRange(oldLoc, GetUpdateRange(m))))
                                 {
@@ -4892,6 +4973,12 @@ namespace Server
                 return false;
             }
 
+            if (QuestItem)
+            {
+                from.SendLocalizedMessage(1074769); // An item must be in your backpack (and not in a container within) to be toggled as a quest item.
+                return false;
+            }
+
             Map map = from.Map;
 
             if (map == null)
@@ -5198,13 +5285,13 @@ namespace Server
             {
                 Point3D worldLoc = GetWorldLocation();
 
-                var eable = m_Map.GetClientsInRange(worldLoc, GetMaxUpdateRange());
+                var eable = m_Map.GetClientsInRange(worldLoc, Core.GlobalMaxUpdateRange);
 
                 foreach (NetState state in eable)
                 {
                     Mobile m = state.Mobile;
 
-                    if (m.InRange(worldLoc, GetUpdateRange(m)))
+                    if (m.InUpdateRange(worldLoc))
                     {
                         state.Send(RemovePacket);
                     }

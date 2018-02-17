@@ -70,7 +70,7 @@ namespace Server.Engines.Harvest
             fish.ConsumedPerFeluccaHarvest = 1;
 
             // The fishing
-            fish.EffectActions = new int[] { 12 };
+            fish.EffectActions = new int[] { Core.SA ? 6 : 12 };
             fish.EffectSounds = new int[0];
             fish.EffectCounts = new int[] { 1 };
             fish.EffectDelay = TimeSpan.Zero;
@@ -100,9 +100,9 @@ namespace Server.Engines.Harvest
             {
                 fish.BonusResources = new BonusHarvestResource[]
                 {
-                    new BonusHarvestResource(0, 99.4, null, null), //set to same chance as mining ml gems
-			        new BonusHarvestResource(80.0, .3, 1113764, typeof(DelicateScales)),
-                	new BonusHarvestResource(80.0, .3, 1072597, typeof(WhitePearl))
+                    new BonusHarvestResource(0, 97.0, null, null), //set to same chance as mining ml gems
+			        new BonusHarvestResource(80.0, 2.0, 1113764, typeof(DelicateScales)),
+                	new BonusHarvestResource(80.0, 1.0, 1072597, typeof(WhitePearl))
                 };
             }
 
@@ -137,6 +137,18 @@ namespace Server.Engines.Harvest
 			new MutateEntry( 80.0,  80.0,  1865.0,  true, typeof( SpecialFishingNet ) ),
 			new MutateEntry( 90.0,  80.0,  1875.0,  true, typeof( TreasureMap ) ),
 			new MutateEntry( 100.0,  80.0,  750.0,  true, typeof( MessageInABottle ) ),			
+			new MutateEntry( 80.0,  80.0,  4080.0,  true, typeof( BigFish ) ),
+			new MutateEntry( 0.0, 125.0, -2375.0, false, typeof( PrizedFish ), typeof( WondrousFish ), typeof( TrulyRareFish ), typeof( PeculiarFish ) ),
+			new MutateEntry( 0.0, 105.0,  -420.0, false, typeof( Boots ), typeof( Shoes ), typeof( Sandals ), typeof( ThighBoots ) ),
+            new MutateEntry( 80.0,  80.0, 2500.0, false, typeof( MudPuppy ), typeof( RedHerring) ),
+			new MutateEntry( 0.0, 200.0,  -200.0, false, new Type[1]{ null } )
+		};
+
+        private static MutateEntry[] m_SiegeMutateTable = new MutateEntry[]
+		{
+			new MutateEntry( 80.0,  80.0,  1865.0,  true, typeof( SpecialFishingNet ) ),
+            new MutateEntry( 0.0, 200.0,  -200.0, false, new Type[1]{ null } ),
+			new MutateEntry( 100.0,  80.0,  1865.0,  true, typeof( MessageInABottle ) ),			
 			new MutateEntry( 80.0,  80.0,  4080.0,  true, typeof( BigFish ) ),
 			new MutateEntry( 0.0, 125.0, -2375.0, false, typeof( PrizedFish ), typeof( WondrousFish ), typeof( TrulyRareFish ), typeof( PeculiarFish ) ),
 			new MutateEntry( 0.0, 105.0,  -420.0, false, typeof( Boots ), typeof( Shoes ), typeof( Sandals ), typeof( ThighBoots ) ),
@@ -182,40 +194,32 @@ namespace Server.Engines.Harvest
                     }
                 }
 
-                foreach (BaseQuest quest in player.Quests)
+                if (from.Region.IsPartOf("Underworld"))
                 {
-                    if (quest is SomethingFishy)
+                    foreach (BaseQuest quest in player.Quests)
                     {
-                        if (Utility.RandomDouble() < 0.1 && (from.Region != null && from.Region.IsPartOf("AbyssEntrance")))
+                        if (quest is SomethingFishy && Utility.RandomDouble() < 0.1)
                         {
                             Item red = new RedHerring();
-                            pack.AddItem(red);
+                            from.AddToBackpack(red);
                             player.SendLocalizedMessage(1095047, "", 0x23); // You pull a shellfish out of the water, but it doesn't have a rainbow pearl.
-                            break;
+                            return true;
                         }
-                        return true;
-                    }
 
-                    if (quest is ScrapingtheBottom)
-                    {
-                        if (Utility.RandomDouble() < 0.1 && (from.Region != null && from.Region.IsPartOf("AbyssEntrance")))
+                        if (quest is ScrapingtheBottom && Utility.RandomDouble() < 0.1)
                         {
                             Item mug = new MudPuppy();
-                            pack.AddItem(mug);
+                            from.AddToBackpack(mug);
                             player.SendLocalizedMessage(1095064, "", 0x23); // You pull a shellfish out of the water, but it doesn't have a rainbow pearl.
-                            break;
+                            return true;
                         }
-                        return true;
                     }
                 }
 
                 #region High Seas Charydbis
                 if (Core.HS && tool is FishingPole && CharydbisSpawner.SpawnInstance != null && CharydbisSpawner.SpawnInstance.IsSummoned)
                 {
-                    if (pack == null)
-                        return false;
-
-                    Item oracle = pack.FindItemByType(typeof(OracleOfTheSea));
+                    Item oracle = from.Backpack.FindItemByType(typeof(OracleOfTheSea));
                     FishingPole pole = tool as FishingPole;
                     CharydbisSpawner sp = CharydbisSpawner.SpawnInstance;
 
@@ -254,22 +258,24 @@ namespace Server.Engines.Harvest
             if (FishInfo.IsRareFish(type))
                 return type;
 
-            bool deepWater = SpecialFishingNet.FullValidation(map, loc.X, loc.Y);
+            bool deepWater = Items.SpecialFishingNet.ValidateDeepWater(map, loc.X, loc.Y);
             bool junkproof = HasTypeHook(tool, HookType.JunkProof); 
 
             double skillBase = from.Skills[SkillName.Fishing].Base;
             double skillValue = from.Skills[SkillName.Fishing].Value;
 
-            for (int i = 0; i < m_MutateTable.Length; ++i)
+            var table = Siege.SiegeShard ? m_SiegeMutateTable : m_MutateTable;
+
+            for (int i = 0; i < table.Length; ++i)
             {
-                // RedHerring/MudPuppy
+                MutateEntry entry = m_MutateTable[i];
+
+                // RedHerring / MudPuppy
                 if (i == 6 && (from.Region == null || !from.Region.IsPartOf("Underworld")))
                     continue;
 
                 if (junkproof && i == 5 && 0.80 >= Utility.RandomDouble())
                     continue;
-
-                MutateEntry entry = m_MutateTable[i];
 
                 if (!deepWater && entry.m_DeepWater)
                     continue;
@@ -284,14 +290,6 @@ namespace Server.Engines.Harvest
             }
 
             return type;
-        }
-
-        private static Map SafeMap(Map map)
-        {
-            if (map == null || map == Map.Internal)
-                return Map.Trammel;
-
-            return map;
         }
 
         public override bool CheckResources(Mobile from, Item tool, HarvestDefinition def, Map map, Point3D loc, bool timed)
@@ -472,7 +470,8 @@ namespace Server.Engines.Harvest
                         if (sos.IsAncient)
                             chest.Hue = 0x481;
 
-                        TreasureMapChest.Fill(chest, from.Luck, Math.Max(1, Math.Min(4, sos.Level)), true, from.Map);
+                        TreasureMapChest.Fill(chest, from is PlayerMobile ? ((PlayerMobile)from).RealLuck : from.Luck, Math.Max(1, Math.Min(4, sos.Level)), true, from.Map);
+                        sos.OnSOSComplete(chest);
 
                         if (sos.IsAncient)
                             chest.DropItem(new FabledFishingNet());
@@ -484,6 +483,8 @@ namespace Server.Engines.Harvest
                         chest.TrapType = TrapType.None;
                         chest.TrapPower = 0;
                         chest.TrapLevel = 0;
+
+                        chest.IsShipwreckedItem = true;
 
                         sos.Delete();
 
@@ -566,6 +567,7 @@ namespace Server.Engines.Harvest
                 from.SendLocalizedMessage(1042635); // Your fishing pole bends as you pull a big fish from the depths!
 
                 ((BigFish)item).Fisher = from;
+                ((BigFish)item).DateCaught = DateTime.Now;
             }
 
             #region Stygian Abyss
@@ -656,6 +658,28 @@ namespace Server.Engines.Harvest
                 else
                     from.SendLocalizedMessage(number, true, name);
             }
+        }
+
+        public override void StartHarvesting(Mobile from, Item tool, object toHarvest)
+        {
+            if (from != null && tool != null && tool.IsChildOf(from.Backpack))
+            {
+                Item item = from.FindItemOnLayer(Layer.OneHanded);
+                Item item2 = from.FindItemOnLayer(Layer.TwoHanded);
+
+                if (item != null)
+                    from.AddToBackpack(item);
+
+                if (item2 != null)
+                    from.AddToBackpack(item2);
+
+                Timer.DelayCall(TimeSpan.FromMilliseconds(250), () =>
+                {
+                    from.EquipItem(tool);
+                });
+            }
+
+            base.StartHarvesting(from, tool, toHarvest);
         }
 
         public override void OnHarvestStarted(Mobile from, Item tool, HarvestDefinition def, object toHarvest)
@@ -850,6 +874,8 @@ namespace Server.Engines.Harvest
                 id = ((StaticTarget)toHarvest).ItemID;
             else if (toHarvest is LandTarget)
                 id = ((LandTarget)toHarvest).TileID;
+            else if (toHarvest is Static && !((Static)toHarvest).Movable)
+                id = ((Static)toHarvest).ItemID;
 
             return ValidateSpecialTile(id);
         }
@@ -982,6 +1008,20 @@ namespace Server.Engines.Harvest
             }
             else
                 base.FinishHarvesting(from, tool, def, toHarvest, locked);
+        }
+
+        public override bool CheckHarvestSkill(Map map, Point3D loc, Mobile from, HarvestResource res, HarvestDefinition def)
+        {
+            bool deepWater = SpecialFishingNet.ValidateDeepWater(map, loc.X, loc.Y);
+            double value = from.Skills[SkillName.Fishing].Value;
+
+            if (deepWater && value < 75.0) // can't fish here yet
+                return from.Skills[def.Skill].Value >= res.ReqSkill;
+
+            if (!deepWater && value >= 75.0) // you can fish, but no gains!
+                return true;
+
+            return base.CheckHarvestSkill(map, loc, from, res, def);
         }
 
         public Type GetSpecialLavaItem(Mobile from, Item type, Map map, Point3D pnt, object toHarvest)

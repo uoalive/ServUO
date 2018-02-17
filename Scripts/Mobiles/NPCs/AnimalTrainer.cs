@@ -76,23 +76,23 @@ namespace Server.Mobiles
 			var vetern = from.Skills[SkillName.Veterinary].Value;
 			var sklsum = taming + anlore + vetern;
 
-			int max;
+            int max = from is PlayerMobile ? ((PlayerMobile)from).RewardStableSlots : 0;
 
 			if (sklsum >= 240.0)
 			{
-				max = 5;
+				max += 5;
 			}
 			else if (sklsum >= 200.0)
 			{
-				max = 4;
+				max += 4;
 			}
 			else if (sklsum >= 160.0)
 			{
-				max = 3;
+				max += 3;
 			}
 			else
 			{
-				max = 2;
+				max += 2;
 			}
 			
 			// bonus SA stable slots
@@ -121,7 +121,7 @@ namespace Server.Mobiles
 				max += (int)((vetern - 90.0) / 10);
 			}
 
-			return max;
+            return max + Server.Spells.SkillMasteries.MasteryInfo.BoardingSlotIncrease(from);
 		}
 
 		private void CloseClaimList(Mobile from)
@@ -428,10 +428,26 @@ namespace Server.Mobiles
 					Claim(e.Mobile);
 				}
 			}
-			else
-			{
-				base.OnSpeech(e);
-			}
+            else if (!e.Handled && e.Speech.ToLower().IndexOf("stablecount") >= 0)
+            {
+                IPooledEnumerable eable = e.Mobile.Map.GetMobilesInRange(e.Mobile.Location, 8);
+                e.Handled = true;
+
+                foreach (Mobile m in eable)
+                {
+                    if (m is AnimalTrainer)
+                    {
+                        e.Mobile.SendLocalizedMessage(1071250, String.Format("{0}\t{1}", e.Mobile.Stabled.Count.ToString(), GetMaxStabled(e.Mobile).ToString())); // ~1_USED~/~2_MAX~ stable stalls used.
+                        break;
+                    }
+                }
+
+                eable.Free();
+            }
+            else
+            {
+                base.OnSpeech(e);
+            }
 		}
 
 		public override void Serialize(GenericWriter writer)
@@ -491,7 +507,7 @@ namespace Server.Mobiles
 					15,
 					275,
 					20,
-					"<BASEFONT COLOR=#FFFFFF>Select a pet to retrieve from the stables:</BASEFONT>",
+                    "<BASEFONT COLOR=#000008>Select a pet to retrieve from the stables:</BASEFONT>",
 					false,
 					false);
 
@@ -510,7 +526,7 @@ namespace Server.Mobiles
 						35 + (i * 20),
 						275,
 						18,
-						String.Format("<BASEFONT COLOR=#C0C0EE>{0}</BASEFONT>", pet.Name),
+						String.Format("<BASEFONT COLOR=#C6C6EF>{0}</BASEFONT>", pet.Name),
 						false,
 						false);
 				}

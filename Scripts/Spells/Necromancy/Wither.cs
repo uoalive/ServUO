@@ -7,6 +7,8 @@ namespace Server.Spells.Necromancy
 {
     public class WitherSpell : NecromancerSpell
     {
+        public override DamageType SpellDamageType { get { return DamageType.SpellAOE; } }
+
         private static readonly SpellInfo m_Info = new SpellInfo(
             "Wither", "Kal Vas An Flam",
             203,
@@ -121,26 +123,27 @@ namespace Server.Spells.Necromancy
                         damage *= 300 + karma + (this.GetDamageSkill(this.Caster) * 10);
                         damage /= 1000;
 
-                        int sdiBonus = AosAttributes.GetValue(this.Caster, AosAttribute.SpellDamage);
-						if (Caster is PlayerMobile && Caster.Race == Race.Gargoyle)
-						{
-							double perc = ((double)Caster.Hits / (double)Caster.HitsMax) * 100;
+                        int sdiBonus;
 
-							perc = 100 - perc;
-							perc /= 20;
+                        if (Core.SE)
+                        {
+                            if (Core.SA)
+                            {
+                                sdiBonus = SpellHelper.GetSpellDamageBonus(Caster, m, CastSkill, m is PlayerMobile);
+                            }
+                            else
+                            {
+                                sdiBonus = AosAttributes.GetValue(this.Caster, AosAttribute.SpellDamage);
 
-							if (perc > 4)
-								sdiBonus += 12;
-							else if (perc >= 3)
-								sdiBonus += 9;
-							else if (perc >= 2)
-								sdiBonus += 6;
-							else if (perc >= 1)
-								sdiBonus += 3;
-						}
-                        // PvP spell damage increase cap of 15% from an item’s magic property in Publish 33(SE)
-                        if (Core.SE && id is PlayerMobile && this.Caster.Player && sdiBonus > 15)
-                            sdiBonus = 15;
+                                // PvP spell damage increase cap of 15% from an item’s magic property in Publish 33(SE)
+                                if (id is PlayerMobile && this.Caster.Player && sdiBonus > 15)
+                                    sdiBonus = 15;
+                            }
+                        }
+                        else
+                        {
+                            sdiBonus = AosAttributes.GetValue(this.Caster, AosAttribute.SpellDamage);
+                        }
 
                         damage *= (100 + sdiBonus);
                         damage /= 100;
