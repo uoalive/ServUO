@@ -119,6 +119,9 @@ namespace Server.Mobiles
                 return 7;
             }
         }
+        
+        public override int DragonBlood { get { return 8; } }
+        
         public override ScaleType ScaleType
         {
             get
